@@ -11,5 +11,4 @@ public class ProfileUpdateRequestDto {
 	private String email;
 	@NotBlank(message = "Required Nickname")
 	private String nickname;
-	private String address;
 }
