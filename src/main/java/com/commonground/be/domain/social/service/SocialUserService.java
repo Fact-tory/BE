@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,6 @@ public class SocialUserService {
 
     private final UserRepository userRepository;
     private final SocialAccountRepository socialAccountRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public User registerSocialUserIfNeeded(SocialUserInfo socialUserInfo) {
@@ -86,15 +84,12 @@ public class SocialUserService {
 
         // 유니크한 username 생성
         String username = generateUniqueUsername(socialUserInfo.getUsername());
-        String password = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(password);
 
         User newUser = User.builder()
                 .username(username)
                 .name(socialUserInfo.getUsername())
                 .nickname(socialUserInfo.getUsername())
                 .role(UserRole.USER)
-                .encodedPassword(encodedPassword)
                 .email(socialUserInfo.getEmail())
                 .build();
 

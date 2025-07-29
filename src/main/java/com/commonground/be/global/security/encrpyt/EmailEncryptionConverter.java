@@ -1,4 +1,4 @@
-package com.commonground.be.global.security;
+package com.commonground.be.global.security.encrpyt;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

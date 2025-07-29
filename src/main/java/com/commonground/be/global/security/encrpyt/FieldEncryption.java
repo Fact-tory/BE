@@ -1,4 +1,4 @@
-package com.commonground.be.global.security;
+package com.commonground.be.global.security.encrpyt;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

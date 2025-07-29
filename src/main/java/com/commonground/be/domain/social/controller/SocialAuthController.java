@@ -6,7 +6,6 @@ import com.commonground.be.domain.social.SocialAuthService;
 import com.commonground.be.global.exception.SocialExceptions;
 import com.commonground.be.global.response.HttpResponseDto;
 import com.commonground.be.global.response.ResponseCodeEnum;
-import com.commonground.be.global.response.ResponseUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
