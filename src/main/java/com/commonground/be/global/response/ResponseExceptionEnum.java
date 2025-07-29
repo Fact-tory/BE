@@ -27,6 +27,7 @@ public enum ResponseExceptionEnum {
 	SOCIAL_USER_INFO_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "소셜 사용자 정보 요청에 실패했습니다."),
 	INVALID_SOCIAL_TOKEN_RESPONSE(HttpStatus.BAD_REQUEST, "소셜 토큰 응답이 올바르지 않습니다."),
 	INVALID_SOCIAL_USER_INFO_RESPONSE(HttpStatus.BAD_REQUEST, "소셜 사용자 정보 응답이 올바르지 않습니다."),
+	
 	;
 
 	private final HttpStatus httpStatus;
