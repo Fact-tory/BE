@@ -25,4 +25,37 @@ public abstract class SoftDeleteTimeStamp {
 
     // @SoftDelete에 의해 자동 관리
     private LocalDateTime deletedAt;
+
+    // 편의 메서드들
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    public boolean isActive() {
+        return deletedAt == null;
+    }
+
+    public void markAsDeleted() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void restore() {
+        this.deletedAt = null;
+    }
+
+    public long getDaysSinceCreated() {
+        return java.time.temporal.ChronoUnit.DAYS.between(createdAt, LocalDateTime.now());
+    }
+
+    public long getDaysSinceUpdated() {
+        return java.time.temporal.ChronoUnit.DAYS.between(updatedAt, LocalDateTime.now());
+    }
+
+    public boolean isRecentlyCreated(int days) {
+        return getDaysSinceCreated() <= days;
+    }
+
+    public boolean isRecentlyUpdated(int days) {
+        return getDaysSinceUpdated() <= days;
+    }
 }

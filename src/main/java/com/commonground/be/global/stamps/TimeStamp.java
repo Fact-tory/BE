@@ -26,4 +26,20 @@ public abstract class TimeStamp {
     @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updatedAt;
 
+    // 편의 메서드들
+    public long getDaysSinceCreated() {
+        return java.time.temporal.ChronoUnit.DAYS.between(createdAt, LocalDateTime.now());
+    }
+
+    public long getDaysSinceUpdated() {
+        return java.time.temporal.ChronoUnit.DAYS.between(updatedAt, LocalDateTime.now());
+    }
+
+    public boolean isRecentlyCreated(int days) {
+        return getDaysSinceCreated() <= days;
+    }
+
+    public boolean isRecentlyUpdated(int days) {
+        return getDaysSinceUpdated() <= days;
+    }
 }
