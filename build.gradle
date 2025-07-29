@@ -49,6 +49,8 @@ dependencies {
 
 	// REDIS
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.redisson:redisson-spring-boot-starter:3.27.0'
+	testImplementation 'it.ozimov:embedded-redis:0.7.2'
 
 	// WEBSOCKET
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
