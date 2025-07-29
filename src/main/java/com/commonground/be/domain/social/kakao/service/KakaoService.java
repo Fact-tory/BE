@@ -3,18 +3,23 @@ package com.commonground.be.domain.social.kakao.service;
 import static com.commonground.be.global.security.JwtProvider.AUTHORIZATION_HEADER;
 import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 
-import com.commonground.be.domain.redis.RedisService;
+import com.commonground.be.domain.session.dto.SessionCreateRequest;
+import com.commonground.be.domain.session.dto.SessionResponse;
+import com.commonground.be.domain.session.service.SessionService;
+import com.commonground.be.domain.social.SocialAuthService;
+import com.commonground.be.domain.social.dto.SocialUserInfo;
+import com.commonground.be.domain.social.service.SocialUserService;
 import com.commonground.be.domain.user.dto.KakaoUserInfoDto;
 import com.commonground.be.domain.user.entity.User;
-import com.commonground.be.domain.user.repository.UserRepository;
-import com.commonground.be.domain.user.utils.UserRole;
+import com.commonground.be.global.concurrency.RedisLock;
+import com.commonground.be.global.exception.SocialExceptions;
 import com.commonground.be.global.security.JwtProvider;
+import com.commonground.be.global.security.TokenManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -32,16 +36,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j(topic = "KAKAO Login")
 @Service
 @RequiredArgsConstructor
-public class KakaoService {
+public class KakaoService implements SocialAuthService {
 
-	private final PasswordEncoder passwordEncoder;
-	private final UserRepository userRepository;
-	// restTemplate를 수동으로 등록해야합니다.
 	private final RestTemplate restTemplate;
 	private final JwtProvider jwtProvider;
-	private final RedisService redisService;
-	// requestBody 생성을 위해 중복 인스턴스 생성을 방지하기 위한 필드화
+	private final SessionService sessionService;
+	private final TokenManager tokenManager;
 	private final ObjectMapper objectMapper;
+	private final SocialUserService socialUserService;
 
 
 	@Value("${kakao.auth.url}")
@@ -54,7 +56,9 @@ public class KakaoService {
 	private String kakaoApiUrl;
 
 
-	public String kakaoLogin(String code, HttpServletResponse res) throws JsonProcessingException {
+	@Override
+	@RedisLock(key = "'social_login:' + #code", waitTime = 3, leaseTime = 10)
+	public String socialLogin(String code, HttpServletResponse res) throws JsonProcessingException {
 		log.info("카카오 로그인 시작 - code: {}", code);
 
 		// 1. "인가 코드"로 "액세스 토큰" 요청
@@ -68,25 +72,60 @@ public class KakaoService {
 		log.info("카카오 사용자 정보 조회 완료 - 사용자 ID: {}", kakaoUserInfo.getId());
 
 		// 3. 필요 시 회원가입
-		User kakaoUser = registerKakaoUserIfNeeded(kakaoUserInfo);
-		log.info("카카오 사용자 등록/조회 완료 - username: {}", kakaoUser.getUsername());
+		SocialUserInfo socialUserInfo = new SocialUserInfo(
+				kakaoUserInfo.getId().toString(),
+				kakaoUserInfo.getUsername(),
+				kakaoUserInfo.getEmail(),
+				"kakao"
+		);
+		User socialUser = socialUserService.registerSocialUserIfNeeded(socialUserInfo);
+		log.info("카카오 사용자 등록/조회 완료 - username: {}", socialUser.getUsername());
 
-		// 4. return jwt
-		String accessToken = jwtProvider.createAccessToken(kakaoUser.getUsername(),
-				kakaoUser.getUserRole());
-		String refreshToken = jwtProvider.createRefreshToken(kakaoUser.getUsername(),
-				kakaoUser.getUserRole());
-		log.info("JWT 토큰 생성 완료 - username: {}", kakaoUser.getUsername());
+		// 4. 세션 생성 및 관리
+		SessionCreateRequest sessionRequest = SessionCreateRequest.builder()
+				.userId(socialUser.getUsername())
+				.userAgent("Kakao-Social-Login")
+				.build();
 
+		SessionResponse session = sessionService.createSession(sessionRequest);
+		log.info("세션 생성 완료 - sessionId: {}", session.getSessionId());
+
+		// 5. JWT 토큰 생성 (세션 ID 포함)
+		String accessToken = jwtProvider.createAccessTokenWithSession(socialUser.getUsername(),
+				socialUser.getUserRole(), session.getSessionId());
+		String refreshToken = jwtProvider.createRefreshTokenWithSession(socialUser.getUsername(),
+				socialUser.getUserRole(), session.getSessionId());
+		log.info("JWT 토큰 생성 완료 - username: {}", socialUser.getUsername());
+
+		// Access Token: 헤더로 전송
 		res.setHeader(AUTHORIZATION_HEADER, accessToken);
-		redisService.saveRefreshToken(kakaoUser.getUsername(), refreshToken);
+
+		// Refresh Token: HttpOnly 쿠키로 설정
+		jwtProvider.setRefreshTokenCookie(res, refreshToken);
 
 		res.setStatus(SC_OK);
 		res.setCharacterEncoding("UTF-8");
 		res.setContentType("application/json");
 
-		log.info("카카오 로그인 완료 - username: {}", kakaoUser.getUsername());
+		log.info("카카오 로그인 완료 - username: {}", socialUser.getUsername());
 		return accessToken;
+	}
+
+	@Override
+	public String getAuthUrl(String redirectUri) {
+		return UriComponentsBuilder
+				.fromUriString(kakaoUrl)
+				.path("/oauth/authorize")
+				.queryParam("client_id", kakaoClientId)
+				.queryParam("redirect_uri", redirectUri)
+				.queryParam("response_type", "code")
+				.encode()
+				.toUriString();
+	}
+
+	@Override
+	public String getProviderName() {
+		return "kakao";
 	}
 
 	// 인가 코드 받는 메서드
@@ -124,13 +163,14 @@ public class KakaoService {
 		JsonNode refreshTokenNode = jsonNode.get("refresh_token");
 
 		if (accessTokenNode == null || refreshTokenNode == null) {
-			throw new IllegalArgumentException("카카오 토큰 응답이 올바르지 않습니다.");
+			throw SocialExceptions.invalidTokenResponse();
 		}
 
 		String accessToken = accessTokenNode.asText();
 		String refreshToken = refreshTokenNode.asText();
 		return accessToken + " " + refreshToken;
 	}
+
 
 	private KakaoUserInfoDto getKakaoUserInfo(String accessToken) throws JsonProcessingException {
 		// 요청 URL 만들기
@@ -160,7 +200,7 @@ public class KakaoService {
 		JsonNode kakaoAccountNode = jsonNode.get("kakao_account");
 
 		if (idNode == null || propertiesNode == null || kakaoAccountNode == null) {
-			throw new IllegalArgumentException("카카오 사용자 정보 응답이 올바르지 않습니다.");
+			throw SocialExceptions.invalidUserInfoResponse();
 		}
 
 		Long id = idNode.asLong();
@@ -168,7 +208,7 @@ public class KakaoService {
 		JsonNode emailNode = kakaoAccountNode.get("email");
 
 		if (nicknameNode == null || emailNode == null) {
-			throw new IllegalArgumentException("카카오 사용자 닉네임 또는 이메일 정보가 없습니다.");
+			throw SocialExceptions.invalidUserInfoResponse();
 		}
 
 		String username = nicknameNode.asText();
@@ -178,52 +218,6 @@ public class KakaoService {
 		return new KakaoUserInfoDto(id, username, email);
 	}
 
-	private User registerKakaoUserIfNeeded(KakaoUserInfoDto kakaoUserInfo) {
-		// DB 에 중복된 Kakao Id 가 있는지 확인
-		Long kakaoId = kakaoUserInfo.getId();
-		User kakaoUser = userRepository.findByKakaoId(kakaoId).orElse(null);
-
-		if (kakaoUser == null) {
-			log.info("신규 카카오 사용자 처리 - 카카오 ID: {}", kakaoId);
-
-			// 카카오 사용자 email 동일한 email 가진 회원이 있는지 확인
-			String kakaoUsername = kakaoUserInfo.getUsername();
-			User sameUsernameUser = userRepository.findByUsername(kakaoUsername).orElse(null);
-			if (sameUsernameUser != null) {
-				log.info("기존 회원과 카카오 계정 통합 - username: {}", kakaoUsername);
-				// 통합 과정
-				kakaoUser = sameUsernameUser;
-				// 기존 회원정보에 카카오 Id 추가
-				kakaoUser.setKakaoId(kakaoId);
-			} else {
-				log.info("신규 카카오 회원 가입 - username: {}", kakaoUsername);
-				// 신규 회원가입
-				// password: random UUID
-				String password = UUID.randomUUID().toString();
-				String encodedPassword = passwordEncoder.encode(password);
-
-				// email: kakao email
-				String email = kakaoUserInfo.getEmail();
-
-				kakaoUser = User.builder()
-						.username(kakaoUsername)
-						.name(kakaoUsername)
-						.nickname(kakaoUsername)
-						.kakaoId(kakaoId)
-						.role(UserRole.USER)
-						.encodedPassword(encodedPassword)
-						.email(email)
-						.address("")
-						.build();
-			}
-
-			userRepository.save(kakaoUser);
-			log.info("카카오 사용자 DB 저장 완료 - username: {}", kakaoUser.getUsername());
-		} else {
-			log.info("기존 카카오 사용자 로그인 - username: {}", kakaoUser.getUsername());
-		}
-		return kakaoUser;
-	}
 
 	// kakao server에 요청을 하기 위한 uri 생성 메서드
 	private URI buildKakaoUri(String baseUrl, String path) {
