@@ -31,9 +31,11 @@ public class JwtProvider {
 	public static final String BEARER_PREFIX = "Bearer ";
 	public static final String AUTHORIZATION_HEADER = "Authorization";
 	public static final String ACCESS_TOKEN_COOKIE_NAME = "AccessToken";
+	public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh-token";
 	public static final String AUTHORIZATION_KEY = "auth";
 
 	private final RedisTemplate<String, String> redisTemplate;
+	private final TokenManager tokenManager;
 
 	@Value("${jwt-secret-key}")
 	private String secretKey;
@@ -58,6 +60,39 @@ public class JwtProvider {
 		response.addCookie(cookie);
 	}
 
+	/**
+	 * Refresh Token을 HttpOnly 쿠키로 설정
+	 */
+	public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+		// Bearer 접두사 제거
+		String tokenValue = refreshToken.startsWith(BEARER_PREFIX)
+				? refreshToken.substring(BEARER_PREFIX.length())
+				: refreshToken;
+
+		Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, tokenValue);
+		refreshCookie.setHttpOnly(true); // JavaScript 접근 차단
+		refreshCookie.setSecure(true); // HTTPS에서만 전송
+		refreshCookie.setPath("/"); // 모든 경로에서 사용 가능
+		refreshCookie.setMaxAge(refreshTokenExpiration.intValue()); // 만료시간 설정
+
+		response.addCookie(refreshCookie);
+		log.info("Refresh Token 쿠키 설정 완료");
+	}
+
+	/**
+	 * 요청에서 Refresh Token 쿠키 추출
+	 */
+	public String getRefreshTokenFromCookie(HttpServletRequest request) {
+		if (request.getCookies() != null) {
+			for (Cookie cookie : request.getCookies()) {
+				if (REFRESH_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
+					return cookie.getValue();
+				}
+			}
+		}
+		return null;
+	}
+
 	@PostConstruct
 	public void init() {
 		key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
@@ -79,6 +114,23 @@ public class JwtProvider {
 	}
 
 	/**
+	 * 세션 ID가 포함된 Access 토큰 생성
+	 */
+	public String createAccessTokenWithSession(String username, UserRole role, String sessionId) {
+		Date date = new Date();
+
+		return BEARER_PREFIX + Jwts.builder()
+				.setSubject(username)
+				.claim(AUTHORIZATION_KEY, role)
+				.claim("sessionId", sessionId)
+				.claim("tokenVersion", System.currentTimeMillis()) // 토큰 버전
+				.setExpiration(new Date(date.getTime() + (accessTokenExpiration * 1000)))
+				.setIssuedAt(date)
+				.signWith(key, SignatureAlgorithm.HS256)
+				.compact();
+	}
+
+	/**
 	 * Refresh 토큰 생성
 	 */
 	public String createRefreshToken(String username, UserRole role) {
@@ -89,6 +141,25 @@ public class JwtProvider {
 				.claim(AUTHORIZATION_KEY, role)
 				.setExpiration(new Date(date.getTime() + (refreshTokenExpiration * 1000)))
 				.setIssuedAt(date) // 발급일
+				.signWith(key, SignatureAlgorithm.HS256)
+				.compact();
+	}
+
+	/**
+	 * 세션 ID가 포함된 Refresh 토큰 생성
+	 */
+	public String createRefreshTokenWithSession(String username, UserRole role, String sessionId) {
+		Date date = new Date();
+		String tokenId = java.util.UUID.randomUUID().toString();
+
+		return BEARER_PREFIX + Jwts.builder()
+				.setSubject(username)
+				.claim(AUTHORIZATION_KEY, role)
+				.claim("sessionId", sessionId)
+				.claim("tokenId", tokenId) // 토큰 고유 ID (블랙리스트용)
+				.claim("tokenVersion", System.currentTimeMillis())
+				.setExpiration(new Date(date.getTime() + (refreshTokenExpiration * 1000)))
+				.setIssuedAt(date)
 				.signWith(key, SignatureAlgorithm.HS256)
 				.compact();
 	}
@@ -111,7 +182,15 @@ public class JwtProvider {
 	 */
 	public boolean validateAccessToken(String token) {
 		try {
-			Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+			Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+			
+			// 블랙리스트 검증 (tokenId가 있는 경우)
+			String tokenId = claims.get("tokenId", String.class);
+			if (tokenId != null && tokenManager.isTokenBlacklisted(tokenId)) {
+				log.warn("블랙리스트에 등록된 토큰 - tokenId: {}", tokenId);
+				return false;
+			}
+			
 			return true;
 		} catch (SecurityException | MalformedJwtException e) {
 			log.error("유효하지 않는 JWT 서명 입니다.");
@@ -172,5 +251,24 @@ public class JwtProvider {
 			return tokenValue;
 		}
 		throw new NullPointerException("토큰이 없습니다.");
+	}
+
+	/**
+	 * 토큰에서 특정 클레임 값 추출
+	 */
+	public String getClaimFromToken(String token, String claimName) {
+		if (StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX)) {
+			token = substringToken(token);
+		}
+		try {
+			Claims claims = Jwts.parserBuilder()
+					.setSigningKey(key)
+					.build()
+					.parseClaimsJws(token)
+					.getBody();
+			return claims.get(claimName, String.class);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 }

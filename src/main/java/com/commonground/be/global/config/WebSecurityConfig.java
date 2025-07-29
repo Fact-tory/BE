@@ -2,10 +2,9 @@ package com.commonground.be.global.config;
 
 
 import com.commonground.be.domain.session.service.SessionService;
+import com.commonground.be.global.security.admin.AdminTokenValidator;
 import com.commonground.be.global.security.JwtProvider;
 import com.commonground.be.global.security.TokenManager;
-import com.commonground.be.global.security.UserDetailsServiceImpl;
-import com.commonground.be.global.security.filters.JwtAuthenticationFilter;
 import com.commonground.be.global.security.filters.JwtAuthorizationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -31,33 +30,12 @@ public class WebSecurityConfig {
 
 	private final TokenManager tokenManager;
 	private final JwtProvider jwtProvider;
-	private final UserDetailsServiceImpl userDetailsService;
 	private final SessionService sessionService;
-	private final AuthenticationConfiguration authenticationConfiguration;
-	private final RedisTemplate<String, String> redisTemplate;
-
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
-
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
-			throws Exception {
-		return configuration.getAuthenticationManager();
-	}
-
-	@Bean
-	public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-		JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtProvider);
-		filter.setAuthenticationManager(authenticationManager(authenticationConfiguration));
-		return filter;
-	}
+	private final AdminTokenValidator adminTokenValidator;
 
 	@Bean
 	public JwtAuthorizationFilter jwtAuthorizationFilter() {
-		return new JwtAuthorizationFilter(jwtProvider, userDetailsService, sessionService,
-				tokenManager);
+		return new JwtAuthorizationFilter(jwtProvider, sessionService, tokenManager, adminTokenValidator);
 	}
 
 	@Bean
@@ -72,16 +50,29 @@ public class WebSecurityConfig {
 
 		http.authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests
 				.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-				.requestMatchers(HttpMethod.POST, "/v1/users", "/v1/users/login",
-						"/v1/users/oauth/kakao/**").permitAll()
-				.requestMatchers(HttpMethod.PUT, "/v1/users/resign/*").permitAll()
-				.requestMatchers("/**").permitAll()
+				
+				// OAuth2 소셜 로그인 관련 경로 (인증 불필요)
+				.requestMatchers("/api/v1/auth/social/**").permitAll()
+				.requestMatchers("/api/v1/auth/reissue").permitAll()
+				
+				// 헬스체크 및 공개 경로
+				.requestMatchers("/health", "/", "/public/**").permitAll()
+				
+				// 레거시 OAuth 경로 지원 (하위 호환성)  
+				.requestMatchers("/v1/users/oauth/**").permitAll()
+				
+				// 관리자 전용 경로 (토큰 검증은 필터에서 처리)
+				.requestMatchers("/api/v1/admin/**").permitAll()
+				
+				// 사용자 API (JWT 토큰 필요, 필터에서 검증)
+				.requestMatchers("/api/v1/users/**").permitAll()
+				
+				// 기타 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 		);
 
-		// 필터 관리
-		http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
-		http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+		// JWT 인가 필터만 추가 (OAuth2이므로 인증 필터는 불필요)
+		http.addFilterBefore(jwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
