@@ -7,6 +7,18 @@ jwt:
   refresh-token:
     expiration: 1209600  # 14 days (14 * 24 * 60 * 60)
 
+admin:
+  master-token: ${ADMIN_MASTER_TOKEN}  # 개발용 고정 토큰
+  token:
+    identifier: ${ADMIN_TOKEN_IDENTIFIER}  # 관리자 식별자
+  session:
+    expiration: 3600  # 60분 (60 * 60)
+    max-concurrent: 1  # 관리자는 1개 세션만
+
+encryption:
+  field:
+    secret-key: ${ENCRYPTION_SECRET_KEY}
+
 
 redis:
   expiration:

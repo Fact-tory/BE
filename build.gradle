@@ -24,6 +24,9 @@ repositories {
 }
 
 dependencies {
+	// Oauth2 Clients for kakao and google
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
 	// JWT
 	compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
 	runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
