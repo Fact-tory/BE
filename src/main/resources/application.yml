@@ -1,63 +1,136 @@
+# =================================
+# 서버 기본 설정
+# =================================
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT}  # 애플리케이션이 실행될 포트 번호
+
+# =================================
+# JWT 토큰 보안 설정
+# =================================
+jwt-secret-key: ${JWT_SECRET_KEY}  # JWT 토큰 서명/검증용 비밀키 (최소 256비트 권장)
 
 jwt:
   access-token:
-    expiration: 3600  # a day (60 * 60)
+    expiration: 3600  # Access Token 만료시간 (1시간) - 짧게 설정하여 보안성 강화
   refresh-token:
-    expiration: 1209600  # 14 days (14 * 24 * 60 * 60)
+    expiration: 1209600  # Refresh Token 만료시간 (14일) - 장기간 로그인 유지용
 
+# =================================
+# 관리자 시스템 설정
+# =================================
 admin:
-  master-token: ${ADMIN_MASTER_TOKEN}  # 개발용 고정 토큰
+  master-token: ${ADMIN_MASTER_TOKEN}  # 관리자 인증용 마스터 토큰 (모든 API 접근 가능)
   token:
-    identifier: ${ADMIN_TOKEN_IDENTIFIER}  # 관리자 식별자
+    identifier: ${ADMIN_TOKEN_IDENTIFIER}  # 관리자 토큰을 식별하는 고유 문자열
   session:
-    expiration: 3600  # 60분 (60 * 60)
-    max-concurrent: 1  # 관리자는 1개 세션만
+    expiration: 3600  # 관리자 세션 만료시간 (1시간) - 보안상 짧게 설정
+    max-concurrent: 1  # 관리자 동시 세션 제한 (중복 로그인 방지)
 
+# =================================
+# 개인정보 암호화 설정
+# =================================
 encryption:
   field:
-    secret-key: ${ENCRYPTION_SECRET_KEY}
+    secret-key: ${ENCRYPTION_SECRET_KEY}  # 이메일 등 민감정보 DB 저장시 암호화용 키
 
+# =================================
+# 소셜 로그인 OAuth2 설정
+# =================================
+google:
+  auth:
+    url: https://accounts.google.com  # Google OAuth2 인증 서버 URL
+    client-id: ${GOOGLE_CLIENT_ID}  # Google Cloud Console에서 발급받은 클라이언트 ID
+    client-secret: ${GOOGLE_CLIENT_SECRET}  # Google OAuth2 클라이언트 시크릿
+    redirect-uri: ${GOOGLE_REDIRECT_URI}  # 인증 완료 후 리다이렉트될 프론트엔드 URL
+  api:
+    url: https://www.googleapis.com  # Google API 서버 URL (사용자 정보 조회용)
 
+kakao:
+  auth:
+    url: https://kauth.kakao.com  # 카카오 OAuth2 인증 서버 URL
+    client-id: ${KAKAO_CLIENT_ID}  # 카카오 개발자센터에서 발급받은 REST API 키
+    redirect-uri: ${KAKAO_REDIRECT_URI}  # 인증 완료 후 리다이렉트될 프론트엔드 URL
+  api:
+    url: https://kapi.kakao.com  # 카카오 API 서버 URL (사용자 정보 조회용)
+
+# =================================
+# Redis 캐시 만료시간 설정
+# =================================
 redis:
   expiration:
-    refresh-token: 1209600  # 14 days (14 * 24 * 60 * 60)
-    kakao-tid: 180  # 3 hours (3 * 60)
-    user-session: 3600  # a day
-    verification-code: 300  # 5 mins
+    refresh-token: 1209600  # Refresh Token Redis 저장 만료시간 (14일)
+    kakao-tid: 180  # 카카오 결제 TID 저장 만료시간 (3시간) - 결제 시스템용
+    user-session: 3600  # 사용자 세션 Redis 저장 만료시간 (1시간)
+    verification-code: 300  # 인증코드 Redis 저장 만료시간 (5분) - 이메일/SMS 인증용
 
 
+# =================================
+# Spring Boot 핵심 설정
+# =================================
 spring:
+  # 데이터베이스 연결 설정
   datasource:
-    url: jdbc:mysql://${DB_URL}/factory
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_URL}/factory?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: ${DB_USER}  # MySQL 사용자명
+    password: ${DB_PASSWORD}  # MySQL 비밀번호
+    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0+ 드라이버
+    # HikariCP 커넥션 풀 설정 (성능 최적화)
+    hikari:
+      maximum-pool-size: 20  # 최대 커넥션 수 (동시 접속자 수 고려)
+      minimum-idle: 5  # 최소 유지 커넥션 수 (빠른 응답을 위해)
+      connection-timeout: 30000  # 커넥션 획득 대기시간 (30초)
+      idle-timeout: 600000  # 유휴 커넥션 제거 시간 (10분)
+      max-lifetime: 1800000  # 커넥션 최대 생존시간 (30분)
 
+  # Redis 캐시 서버 연결 설정
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      host: ${REDIS_HOST}  # Redis 서버 주소
+      port: ${REDIS_PORT}  # Redis 서버 포트 (기본: 6379)
+      timeout: 3000ms  # Redis 응답 대기시간 (3초)
       repositories:
-        enabled: false
+        enabled: false  # Spring Data Redis Repository 비활성화 (직접 제어)
 
-  sql:
-    init:
-      encoding: UTF-8
-
+  # JPA/Hibernate ORM 설정
   jpa:
     hibernate:
-      ddl-auto: update
-
-  properties:
-    hibernate:
-      ddl-auto: update
+      ddl-auto: update  # 엔티티 변경시 테이블 구조 자동 업데이트 (개발용)
+      naming:
+        # 테이블/컬럼명 매핑 전략 (camelCase → snake_case 변환 안함)
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
-        show_sql: true
-        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect  # MySQL 8.0 특화 SQL 방언
+        show_sql: ${HIBERNATE_SHOW_SQL:false}  # SQL 로그 출력 여부 (개발시에만 true)
+        format_sql: true  # SQL 로그 포맷팅 (가독성 향상)
+        use_sql_comments: true  # SQL에 주석 추가 (디버깅용)
+        jdbc:
+          batch_size: 20  # 배치 INSERT/UPDATE 크기 (성능 최적화)
+        order_inserts: true  # INSERT 문 정렬 (배치 효율성 증대)
+        order_updates: true  # UPDATE 문 정렬 (배치 효율성 증대)
         connection:
-          CharSet: utf-8
-          characterEncoding: utf-8
-          useUnicode: true
+          CharSet: utf8mb4  # 이모지 지원 문자셋
+          characterEncoding: utf-8  # 한글 인코딩
+          useUnicode: true  # 유니코드 사용
+    open-in-view: false  # OSIV 비활성화 (N+1 문제 방지, 성능 최적화)
+
+  # SQL 스크립트 초기화 설정
+  sql:
+    init:
+      encoding: UTF-8  # SQL 파일 인코딩
+
+# =================================
+# 로깅 시스템 설정
+# =================================
+logging:
+  level:
+    # 애플리케이션 로그 레벨 (TRACE < DEBUG < INFO < WARN < ERROR)
+    com.commonground.be: ${LOG_LEVEL:INFO}  # 우리 앱 로그 레벨 (개발: DEBUG, 운영: INFO)
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}  # Spring Security 로그 (보안 관련)
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}  # Hibernate SQL 로그 (성능 디버깅용)
+    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_PARAM_LOG_LEVEL:WARN}  # SQL 파라미터 로그
+  pattern:
+    # 콘솔 출력 형식: [날짜 시간] [스레드명] 로그레벨 클래스명 - 메시지
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    # 파일 출력 형식 (콘솔과 동일)
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

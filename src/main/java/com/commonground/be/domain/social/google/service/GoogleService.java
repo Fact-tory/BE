@@ -38,6 +38,8 @@ public class GoogleService extends AbstractSocialAuthService {
 	private String googleClientId;
 	@Value("${google.auth.client-secret}")
 	private String googleClientSecret;
+	@Value("${google.auth.redirect-uri}")
+	private String googleRedirectUri;
 	@Value("${google.api.url}")
 	private String googleApiUrl;
 
@@ -78,7 +80,7 @@ public class GoogleService extends AbstractSocialAuthService {
 		body.add("grant_type", "authorization_code");
 		body.add("client_id", googleClientId);
 		body.add("client_secret", googleClientSecret);
-		body.add("redirect_uri", "http://localhost:3000/oauth/google");
+		body.add("redirect_uri", googleRedirectUri);
 		body.add("code", code);
 
 		RequestEntity<MultiValueMap<String, String>> requestEntity = RequestEntity
