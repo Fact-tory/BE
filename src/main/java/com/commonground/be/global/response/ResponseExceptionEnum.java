@@ -20,6 +20,13 @@ public enum ResponseExceptionEnum {
 	UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
 	USER_ERROR(HttpStatus.BAD_REQUEST, "유저 오류 발생"),
 	USER_NOT_MANAGER(HttpStatus.BAD_REQUEST, "권한이 없습니다."),
+	
+	// 소셜 로그인
+	INVALID_SOCIAL_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 로그인 프로바이더입니다."),
+	SOCIAL_TOKEN_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "소셜 토큰 요청에 실패했습니다."),
+	SOCIAL_USER_INFO_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "소셜 사용자 정보 요청에 실패했습니다."),
+	INVALID_SOCIAL_TOKEN_RESPONSE(HttpStatus.BAD_REQUEST, "소셜 토큰 응답이 올바르지 않습니다."),
+	INVALID_SOCIAL_USER_INFO_RESPONSE(HttpStatus.BAD_REQUEST, "소셜 사용자 정보 응답이 올바르지 않습니다."),
 	;
 
 	private final HttpStatus httpStatus;

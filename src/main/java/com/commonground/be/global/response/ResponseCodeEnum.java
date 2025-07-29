@@ -20,6 +20,10 @@ public enum ResponseCodeEnum {
 	USER_SUCCESS_LIST(HttpStatus.OK, "유저 리스트 입니다."),
 	SUCCESS_TEMPORARY_PASSWORD(HttpStatus.OK, "새로운 패스워드를 생성했습니다."),
 	SUCCESS_CHANGE_PASSWORD(HttpStatus.OK, "비밀번호 변경을 완료 했습니다."),
+	
+	// 소셜 로그인
+	SOCIAL_AUTH_URL_SUCCESS(HttpStatus.OK, "소셜 로그인 URL을 생성했습니다."),
+	SOCIAL_LOGIN_SUCCESS(HttpStatus.OK, "소셜 로그인을 완료했습니다."),
 	;
 
 
