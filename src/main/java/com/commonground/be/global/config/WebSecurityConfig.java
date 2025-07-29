@@ -3,6 +3,7 @@ package com.commonground.be.global.config;
 
 import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.global.security.admin.AdminTokenValidator;
+import com.commonground.be.global.security.details.CustomUserDetailsService;
 import com.commonground.be.global.security.JwtProvider;
 import com.commonground.be.global.security.TokenManager;
 import com.commonground.be.global.security.filters.JwtAuthorizationFilter;
@@ -32,10 +33,11 @@ public class WebSecurityConfig {
 	private final JwtProvider jwtProvider;
 	private final SessionService sessionService;
 	private final AdminTokenValidator adminTokenValidator;
+	private final CustomUserDetailsService userDetailsService;
 
 	@Bean
 	public JwtAuthorizationFilter jwtAuthorizationFilter() {
-		return new JwtAuthorizationFilter(jwtProvider, sessionService, tokenManager, adminTokenValidator);
+		return new JwtAuthorizationFilter(jwtProvider, sessionService, tokenManager, adminTokenValidator, userDetailsService);
 	}
 
 	@Bean

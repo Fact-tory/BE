@@ -3,10 +3,11 @@ package com.commonground.be.global.security.filters;
 
 import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.global.response.HttpResponseDto;
-import com.commonground.be.global.security.admin.AdminTokenValidator;
-import com.commonground.be.global.security.admin.AdminUserDetails;
+import com.commonground.be.global.security.details.CustomUserDetailsService;
 import com.commonground.be.global.security.JwtProvider;
 import com.commonground.be.global.security.TokenManager;
+import com.commonground.be.global.security.admin.AdminTokenValidator;
+import com.commonground.be.global.security.admin.AdminUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,15 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.util.Collection;
-import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -36,6 +33,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	private final SessionService sessionService;
 	private final TokenManager tokenManager;
 	private final AdminTokenValidator adminTokenValidator;
+	private final CustomUserDetailsService userDetailsService;
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res,
@@ -69,32 +67,33 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * OAuth2 기반 JWT 토큰으로 인증 설정
-	 * UserDetailsService 없이 JWT에서 직접 정보 추출
+	 * JWT 토큰으로 UserDetails 기반 인증 설정
 	 */
 	private void setAuthentication(String token) {
 		try {
 			String username = jwtProvider.getUsernameFromToken(token);
-			String roleStr = jwtProvider.getClaimFromToken(token, "role");
-			
-			// 간단한 권한 생성 (OAuth2 스타일)
-			Collection<GrantedAuthority> authorities = List.of(
-				new SimpleGrantedAuthority("ROLE_USER"),
-				new SimpleGrantedAuthority("ROLE_" + roleStr.toUpperCase())
-			);
-			
-			// OAuth2 스타일 Authentication 생성 
+			String sessionId = jwtProvider.getClaimFromToken(token, "sessionId");
+
+			// UserDetailsService를 통해 UserDetails 생성
+			UserDetails userDetails;
+			if (sessionId != null) {
+				userDetails = userDetailsService.loadUserByUsernameWithSession(username, sessionId);
+			} else {
+				userDetails = userDetailsService.loadUserByUsername(username);
+			}
+
+			// Spring Security Authentication 생성
 			Authentication authentication = new UsernamePasswordAuthenticationToken(
-				username, null, authorities);
-			
+					userDetails, null, userDetails.getAuthorities());
+
 			SecurityContext context = SecurityContextHolder.createEmptyContext();
 			context.setAuthentication(authentication);
 			SecurityContextHolder.setContext(context);
-			
-			log.debug("OAuth2 JWT 토큰 인증 설정 완료: username={}, role={}", username, roleStr);
-			
+
+			log.debug("JWT 토큰 UserDetails 인증 설정 완료: username={}", username);
+
 		} catch (Exception e) {
-			log.error("JWT 토큰에서 사용자 정보 추출 실패: {}", e.getMessage());
+			log.error("JWT 토큰에서 UserDetails 생성 실패: {}", e.getMessage());
 		}
 	}
 
@@ -105,7 +104,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		AdminUserDetails adminUserDetails = new AdminUserDetails();
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
-			adminUserDetails, null, adminUserDetails.getAuthorities());
+				adminUserDetails, null, adminUserDetails.getAuthorities());
 		context.setAuthentication(authentication);
 		SecurityContextHolder.setContext(context);
 	}
@@ -177,35 +176,34 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * 인증이 필요하지 않은 공개 경로인지 확인
-	 * OAuth2 소셜 로그인 및 공개 API 경로들을 포함
+	 * 인증이 필요하지 않은 공개 경로인지 확인 OAuth2 소셜 로그인 및 공개 API 경로들을 포함
 	 */
 	private boolean isPublicPath(String requestURI) {
 		// OAuth2 소셜 로그인 관련 경로
 		if (requestURI.startsWith("/api/v1/auth/social/")) {
 			return true;
 		}
-		
+
 		// 토큰 재발급 경로
 		if (requestURI.equals("/api/v1/auth/reissue")) {
 			return true;
 		}
-		
+
 		// 헬스체크 및 기타 공개 경로
-		if (requestURI.equals("/health") || 
-			requestURI.equals("/") || 
-			requestURI.startsWith("/static/") ||
-			requestURI.startsWith("/public/")) {
+		if (requestURI.equals("/health") ||
+				requestURI.equals("/") ||
+				requestURI.startsWith("/static/") ||
+				requestURI.startsWith("/public/")) {
 			return true;
 		}
-		
+
 		// 레거시 경로 지원 (하위 호환성)
-		if (requestURI.equals("/v1/users/login") || 
-			requestURI.startsWith("/v1/users/oauth/")) {
+		if (requestURI.equals("/v1/users/login") ||
+				requestURI.startsWith("/v1/users/oauth/")) {
 			log.warn("레거시 OAuth 경로 사용됨: {} - /api/v1/auth/social/ 사용 권장", requestURI);
 			return true;
 		}
-		
+
 		return false;
 	}
 }

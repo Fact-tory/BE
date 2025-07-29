@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class SessionResponse {
     private String sessionId;
     private String userId;
-    private String ipAddress;
     private String userAgent;
     private LocalDateTime createdAt;
     private LocalDateTime lastAccessTime;
@@ -25,7 +24,6 @@ public class SessionResponse {
         return SessionResponse.builder()
                 .sessionId(session.getSessionId())
                 .userId(session.getUserId())
-                .ipAddress(session.getIpAddress())
                 .userAgent(session.getUserAgent())
                 .createdAt(session.getCreatedAt())
                 .lastAccessTime(session.getLastAccessTime())

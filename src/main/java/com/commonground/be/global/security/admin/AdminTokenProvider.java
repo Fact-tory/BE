@@ -1,6 +1,6 @@
 package com.commonground.be.global.security.admin;
 
-import com.commonground.be.global.security.FieldEncryption;
+import com.commonground.be.global.security.encrpyt.FieldEncryption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,13 +1,11 @@
 package com.commonground.be.global.security.admin;
 
-import com.commonground.be.global.security.FieldEncryption;
+import com.commonground.be.global.security.encrpyt.FieldEncryption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 /**
  * 관리자 토큰 생성 유틸리티

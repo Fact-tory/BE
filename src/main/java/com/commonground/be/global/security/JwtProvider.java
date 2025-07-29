@@ -178,7 +178,7 @@ public class JwtProvider {
 	}
 
 	/**
-	 * Access 토큰 검증
+	 * JWT 토큰 검증 (Access Token, Refresh Token 공통)
 	 */
 	public boolean validateAccessToken(String token) {
 		try {

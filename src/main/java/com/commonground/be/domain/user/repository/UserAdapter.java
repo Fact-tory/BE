@@ -1,8 +1,5 @@
 package com.commonground.be.domain.user.repository;
 
-import static com.commonground.be.global.response.ResponseExceptionEnum.USER_DELETED;
-import static com.commonground.be.global.response.ResponseExceptionEnum.USER_NOT_FOUND;
-
 import com.commonground.be.domain.user.entity.User;
 import com.commonground.be.domain.user.utils.UserIdentity;
 import com.commonground.be.global.exception.UserExceptions;
@@ -23,7 +20,7 @@ public class UserAdapter {
 
 	public User findByUsername(String username) {
 		return userRepository.findByUsername(username)
-				.orElseThrow(() -> UserExceptions.userNotFound());
+				.orElseThrow(UserExceptions::userNotFound);
 	}
 
 	public List<User> findAll() {
@@ -36,7 +33,7 @@ public class UserAdapter {
 
 	public User findById(Long id) {
 		return userRepository.findById(id)
-				.orElseThrow(() -> UserExceptions.userNotFound());
+				.orElseThrow(UserExceptions::userNotFound);
 	}
 
 	public void save(User user) {
@@ -58,7 +55,7 @@ public class UserAdapter {
 		return userRepository.findUserByUsernameAndNameAndEmail(
 						userIdentity.getUsername(), userIdentity.getName(), userIdentity.getEmail())
 				.orElseThrow(
-						() -> UserExceptions.userNotFound()
+						UserExceptions::userNotFound
 				);
 	}
 
