@@ -1,4 +1,4 @@
-package com.sparta.itsmine.global.common.config;
+package com.commonground.be.global.infrastructure.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
