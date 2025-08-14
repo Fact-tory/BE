@@ -1,5 +1,5 @@
 # =================================
-# CommonGround BE CD Pipeline
+# Factory BE CD Pipeline
 # 운영 환경 배포 자동화
 # =================================
 
@@ -55,7 +55,7 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: commonground-be-staging
+        ECR_REPOSITORY: factory-be-staging
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -66,15 +66,15 @@ jobs:
     - name: Deploy to ECS Staging
       run: |
         aws ecs update-service \
-          --cluster commonground-staging-cluster \
-          --service commonground-be-staging-service \
+          --cluster factory-staging-cluster \
+          --service factory-be-staging-service \
           --force-new-deployment
     
     - name: Wait for deployment
       run: |
         aws ecs wait services-stable \
-          --cluster commonground-staging-cluster \
-          --services commonground-be-staging-service
+          --cluster factory-staging-cluster \
+          --services factory-be-staging-service
     
     - name: Run health checks
       run: |
@@ -99,7 +99,7 @@ jobs:
       if: success()
       with:
         status: success
-        text: '🚀 CommonGround BE successfully deployed to Staging!'
+        text: '🚀 Factory BE successfully deployed to Staging!'
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     
@@ -108,7 +108,7 @@ jobs:
       if: failure()
       with:
         status: failure
-        text: '❌ CommonGround BE deployment to Staging failed!'
+        text: '❌ Factory BE deployment to Staging failed!'
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -121,7 +121,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment: 
       name: production
-      url: https://api.commonground.com
+      url: https://api.factory.dev
     
     steps:
     - name: Checkout code
@@ -151,7 +151,7 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: commonground-be-production
+        ECR_REPOSITORY: factory-be-production
         VERSION: ${{ steps.version.outputs.VERSION }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION .
@@ -163,8 +163,8 @@ jobs:
       run: |
         # 현재 실행 중인 태스크 정의 백업
         aws ecs describe-services \
-          --cluster commonground-production-cluster \
-          --services commonground-be-production-service \
+          --cluster factory-production-cluster \
+          --services factory-be-production-service \
           --query 'services[0].taskDefinition' \
           --output text > previous-task-definition.txt
         
@@ -173,15 +173,15 @@ jobs:
     - name: Deploy to ECS Production
       run: |
         aws ecs update-service \
-          --cluster commonground-production-cluster \
-          --service commonground-be-production-service \
+          --cluster factory-production-cluster \
+          --service factory-be-production-service \
           --force-new-deployment
     
     - name: Wait for deployment
       run: |
         aws ecs wait services-stable \
-          --cluster commonground-production-cluster \
-          --services commonground-be-production-service
+          --cluster factory-production-cluster \
+          --services factory-be-production-service
     
     - name: Run health checks
       run: |
@@ -211,8 +211,8 @@ jobs:
         PREVIOUS_TASK_DEF=$(cat previous-task-definition.txt)
         
         aws ecs update-service \
-          --cluster commonground-production-cluster \
-          --service commonground-be-production-service \
+          --cluster factory-production-cluster \
+          --service factory-be-production-service \
           --task-definition "$PREVIOUS_TASK_DEF"
         
         echo "Rollback initiated to: $PREVIOUS_TASK_DEF"
@@ -226,7 +226,7 @@ jobs:
         tag_name: ${{ steps.version.outputs.VERSION }}
         release_name: Release ${{ steps.version.outputs.VERSION }}
         body: |
-          ## 🚀 CommonGround BE ${{ steps.version.outputs.VERSION }}
+          ## 🚀 Factory BE ${{ steps.version.outputs.VERSION }}
           
           ### 주요 변경사항
           - 자동 생성된 릴리즈입니다.
@@ -246,7 +246,7 @@ jobs:
       with:
         status: success
         text: |
-          🎉 CommonGround BE ${{ steps.version.outputs.VERSION }} successfully deployed to Production!
+          🎉 Factory BE ${{ steps.version.outputs.VERSION }} successfully deployed to Production!
           
           🔗 Health Check: ${{ secrets.PRODUCTION_HEALTH_CHECK_URL }}/actuator/health
           📊 Monitoring: ${{ secrets.MONITORING_DASHBOARD_URL }}
@@ -259,7 +259,7 @@ jobs:
       with:
         status: failure
         text: |
-          🚨 CommonGround BE deployment to Production failed!
+          🚨 Factory BE deployment to Production failed!
           
           🔄 Rollback has been initiated
           🔍 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

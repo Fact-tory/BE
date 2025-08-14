@@ -91,7 +91,7 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	// DOCKER
-//	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	// MYSQL DRIVER
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	// H2 Database for testing only

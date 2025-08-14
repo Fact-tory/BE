@@ -1,15 +1,15 @@
 # =================================
-# CommonGround BE CI/CD Pipeline
+# Factory BE CI Pipeline
 # 코드 품질 검사, 테스트 실행, 빌드 자동화
 # =================================
 
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 # 동시 실행 제한 (같은 브랜치에서는 최신 워크플로우만 실행)
 concurrency:
@@ -167,12 +167,31 @@ jobs:
         ENCRYPTION_SECRET_KEY: test-encryption-key-32-chars-long
         ADMIN_MASTER_TOKEN: test-admin-master-token
         ADMIN_TOKEN_IDENTIFIER: test-admin
+        # 외부 API 키들은 테스트용 더미 값 사용
+        NAVER_API_CLIENT_ID: test-naver-client-id
+        NAVER_API_CLIENT_SECRET: test-naver-client-secret
+        GOOGLE_CLIENT_ID: test-google-client-id
+        GOOGLE_CLIENT_SECRET: test-google-client-secret
+        KAKAO_CLIENT_ID: test-kakao-client-id
+        KAKAO_REDIRECT_URI: http://localhost:3000/oauth/kakao
+        GOOGLE_REDIRECT_URI: http://localhost:3000/oauth/google
+        # 인프라 서비스 설정
+        OPENSEARCH_HOST: localhost
+        OPENSEARCH_PORT: 9200
+        OPENSEARCH_SCHEME: http
+        OPENSEARCH_USERNAME: admin
+        OPENSEARCH_PASSWORD: admin
+        MONGODB_URI: mongodb://localhost:27017/factory_test
+        RABBITMQ_HOST: localhost
+        RABBITMQ_PORT: 5672
+        RABBITMQ_USERNAME: guest
+        RABBITMQ_PASSWORD: guest
+        RABBITMQ_VHOST: /
     
-    # JaCoCo 플러그인이 build.gradle에 있어야 작동
-    # 현재 프로젝트에 JaCoCo 플러그인이 없으므로 주석 처리
-    # - name: Generate test report
-    #   run: ./gradlew jacocoTestReport
-    #   if: always()
+    # JaCoCo 테스트 커버리지 리포트 생성
+    - name: Generate test report
+      run: ./gradlew jacocoTestReport
+      if: always()
     
     - name: Upload test results
       uses: actions/upload-artifact@v3
@@ -183,13 +202,14 @@ jobs:
           build/reports/tests/
           build/reports/jacoco/test/html/
     
-    # Codecov 업로드도 JaCoCo 리포트가 있어야 하므로 주석 처리
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@v3
-    #   with:
-    #     file: build/reports/jacoco/test/jacocoTestReport.xml
-    #     flags: unittests
-    #     name: codecov-umbrella
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      with:
+        file: build/reports/jacoco/test/jacocoTestReport.xml
+        flags: unittests
+        name: codecov-umbrella
 
   # =================================
   # 애플리케이션 빌드
@@ -253,17 +273,18 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     
-    - name: Login to Docker Hub
+    - name: Login to GitHub Container Registry
       uses: docker/login-action@v2
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: commonground/be
+        images: ghcr.io/fact-tory/be
         tags: |
           type=ref,event=branch
           type=sha,prefix={{branch}}-
