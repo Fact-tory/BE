@@ -1,0 +1,31 @@
+# =================================
+# OpenSearch 개발환경 설정
+# =================================
+
+cluster.name: commonground-dev
+node.name: opensearch-dev
+
+# 네트워크 설정
+network.host: 0.0.0.0
+http.port: 9200
+
+# 단일 노드 클러스터 설정
+discovery.type: single-node
+
+# 보안 설정 (개발환경용) - 완전 비활성화
+plugins.security.disabled: true
+
+# 성능 설정
+bootstrap.memory_lock: false
+cluster.routing.allocation.disk.threshold_enabled: false
+
+# 한글 검색을 위한 기본 분석기 설정
+index:
+  analysis:
+    analyzer:
+      korean:
+        type: standard
+        stopwords: _korean_
+    tokenizer:
+      korean_tokenizer:
+        type: standard

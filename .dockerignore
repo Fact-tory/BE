@@ -1,0 +1,95 @@
+# =================================
+# CommonGround BE Docker Ignore 파일
+# Docker 빌드 시 제외할 파일 및 디렉토리
+# =================================
+
+# Git 관련 파일
+.git
+.gitignore
+.gitattributes
+
+# IDE 설정 파일
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# 문서 파일
+README.md
+*.md
+docs/
+
+# 개발 환경 설정
+.env
+.env.local
+.env.development
+.env.test
+
+# 빌드 결과물 (멀티스테이지 빌드에서 처리)
+build/
+!build/libs/*.jar
+
+# Gradle 캐시 (이미지 크기 최적화)
+.gradle/
+gradle/
+
+# 테스트 관련
+src/test/
+**/test/
+**/*Test.java
+**/*Tests.java
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
+
+# Docker 관련 파일 (무한 재귀 방지)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD 설정
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# 인프라 설정
+docker/
+k8s/
+terraform/
+
+# 백업 파일
+*.bak
+*.backup
+*~
+
+# 압축 파일
+*.tar
+*.tar.gz
+*.zip
+
+# 개발용 스크립트
+scripts/dev/
+*.sh
+*.bat
+
+# 캐시 디렉토리
+node_modules/
+.npm/
+.yarn/
+
+# 기타 불필요한 파일
+.classpath
+.project
+.settings/
+bin/
+target/
