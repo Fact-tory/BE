@@ -3,8 +3,8 @@ package com.commonground.be.domain.user.entity;
 
 import com.commonground.be.domain.user.dto.ProfileUpdateRequestDto;
 import com.commonground.be.domain.user.utils.UserRole;
-import com.commonground.be.global.stamps.SoftDeleteTimeStamp;
-import com.commonground.be.global.security.encrpyt.EmailEncryptionConverter;
+import com.commonground.be.global.domain.audit.SoftDeleteTimeStamp;
+import com.commonground.be.global.infrastructure.encryption.EmailEncryptionConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -19,11 +19,9 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
 		name = "user",
@@ -52,8 +50,6 @@ public class User extends SoftDeleteTimeStamp {
 	@Column(nullable = false)
 	private String name;
 
-	@Column(nullable = false, unique = true)
-	private String nickname;
 
 	@Column(nullable = false, unique = true)
 	@Convert(converter = EmailEncryptionConverter.class)
@@ -69,10 +65,9 @@ public class User extends SoftDeleteTimeStamp {
 	 * 생성자 - 약속된 형태로만 생성가능하도록 합니다.
 	 */
 	@Builder
-	public User(String username, String name, String nickname, String email, UserRole role) {
+	public User(String username, String name, String email, UserRole role) {
 		this.username = username;
 		this.name = name;
-		this.nickname = nickname;
 		this.email = email;
 		this.userRole = role;
 	}
@@ -92,9 +87,8 @@ public class User extends SoftDeleteTimeStamp {
 
 	public void updateProfile(ProfileUpdateRequestDto requestDto) {
 		this.email = requestDto.getEmail();
-		this.nickname = requestDto.getNickname();
 	}
-	
+
 	// 이메일 변경 시 소셜 계정들도 함께 업데이트 필요
 	public boolean isEmailChanged(String newEmail) {
 		return !this.email.equals(newEmail);

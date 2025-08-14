@@ -1,11 +1,11 @@
-package com.commonground.be.domain.journal;
+package com.commonground.be.domain.journal.entity;
 
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -14,7 +14,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "journalists")
-@Data
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,6 +35,7 @@ public class Journalist {
 	private String bio;
 	private List<String> specialization;
 
+	@Builder.Default
 	private Boolean isActive = true;
 
 	@CreatedDate
@@ -44,4 +45,9 @@ public class Journalist {
 	private LocalDateTime updatedAt;
 
 	private LocalDateTime deletedAt;
+	
+	// 도메인 메서드
+	public void assignId(String id) {
+		this.id = id;
+	}
 }
