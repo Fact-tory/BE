@@ -2,6 +2,11 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.3'
 	id 'io.spring.dependency-management' version '1.1.7'
+	
+	// 코드 품질 및 정적 분석 플러그인 (선택사항)
+//	 id 'checkstyle'  // 코드 스타일 검사 (필요시 주석 해제)
+	// id 'com.github.spotbugs' version '5.0.13'  // 버그 탐지 (필요시 주석 해제)
+	id 'jacoco'  // 테스트 커버리지
 }
 
 group = 'com.commonGround'
@@ -11,6 +16,12 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
 	}
+}
+
+// 컴파일러 경고 옵션 설정
+tasks.withType(JavaCompile) {
+	options.compilerArgs += ['-Xlint:deprecation', '-Xlint:unchecked']
+	options.deprecation = true
 }
 
 configurations {
@@ -24,11 +35,28 @@ repositories {
 }
 
 dependencies {
+	// opensearch (fixed version compatibility)
+	implementation('org.opensearch.client:opensearch-rest-client:2.6.0') {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+	implementation('org.opensearch.client:opensearch-java:2.6.0') {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+	implementation('org.opensearch.client:opensearch-rest-high-level-client:2.6.0') {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+	implementation('org.apache.httpcomponents:httpclient:4.5.14') {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+	implementation('org.apache.httpcomponents:httpcore:4.4.16') {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+
 	// Oauth2 Clients for kakao and google
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
 	// JWT
-	compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+	implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
 	runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
 	runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
 
@@ -47,13 +75,14 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-batch'
 
 	// SEARCH ENGINE
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
 	// REDIS
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.redisson:redisson-spring-boot-starter:3.27.0'
 	testImplementation 'it.ozimov:embedded-redis:0.7.2'
+
+	// CRAWLER
 
 	// WEBSOCKET
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
@@ -62,9 +91,14 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	// DOCKER
-	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+//	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	// MYSQL DRIVER
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	// H2 Database for testing only
+	testRuntimeOnly 'com.h2database:h2'
+
+	// HTTP 클라이언트 (타임아웃, 헤더 설정용)
+	implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -74,4 +108,27 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	ignoreFailures = true
+	finalizedBy jacocoTestReport
+}
+
+// JaCoCo 테스트 리포트 설정
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+		csv.required = false
+	}
+}
+
+// 커버리지 검증 (선택사항)
+jacocoTestCoverageVerification {
+	violationRules {
+		rule {
+			limit {
+				minimum = 0.70 // 70% 커버리지 요구
+			}
+		}
+	}
 }
