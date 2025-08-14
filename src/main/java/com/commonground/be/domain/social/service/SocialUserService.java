@@ -70,7 +70,7 @@ public class SocialUserService {
                 .provider(provider)
                 .socialId(socialUserInfo.getId())
                 .email(socialUserInfo.getEmail())
-                .socialUsername(socialUserInfo.getUsername())
+                .socialUsername(socialUserInfo.getName())
                 .build();
 
         socialAccountRepository.save(socialAccount);
@@ -83,12 +83,11 @@ public class SocialUserService {
         log.info("신규 {} 사용자 생성 - email: {}", provider, socialUserInfo.getEmail());
 
         // 유니크한 username 생성
-        String username = generateUniqueUsername(socialUserInfo.getUsername());
+        String username = generateUniqueUsername(socialUserInfo.getName());
 
         User newUser = User.builder()
                 .username(username)
-                .name(socialUserInfo.getUsername())
-                .nickname(socialUserInfo.getUsername())
+                .name(socialUserInfo.getName())
                 .role(UserRole.USER)
                 .email(socialUserInfo.getEmail())
                 .build();
@@ -102,7 +101,7 @@ public class SocialUserService {
                 .provider(provider)
                 .socialId(socialUserInfo.getId())
                 .email(socialUserInfo.getEmail())
-                .socialUsername(socialUserInfo.getUsername())
+                .socialUsername(socialUserInfo.getName())
                 .build();
 
         socialAccountRepository.save(socialAccount);

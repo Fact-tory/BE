@@ -1,8 +1,8 @@
 package com.commonground.be.domain.social.entity;
 
 import com.commonground.be.domain.user.entity.User;
-import com.commonground.be.global.security.encrpyt.EmailEncryptionConverter;
-import com.commonground.be.global.stamps.TimeStamp;
+import com.commonground.be.global.infrastructure.encryption.EmailEncryptionConverter;
+import com.commonground.be.global.domain.audit.TimeStamp;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;

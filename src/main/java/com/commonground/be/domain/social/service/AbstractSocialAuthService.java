@@ -1,6 +1,6 @@
 package com.commonground.be.domain.social.service;
 
-import static com.commonground.be.global.security.JwtProvider.AUTHORIZATION_HEADER;
+import static com.commonground.be.global.infrastructure.security.jwt.JwtProvider.AUTHORIZATION_HEADER;
 import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 
 import com.commonground.be.domain.session.dto.SessionCreateRequest;
@@ -9,8 +9,8 @@ import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.domain.social.SocialAuthService;
 import com.commonground.be.domain.social.dto.SocialUserInfo;
 import com.commonground.be.domain.user.entity.User;
-import com.commonground.be.global.concurrency.RedisLock;
-import com.commonground.be.global.security.JwtProvider;
+import com.commonground.be.global.infrastructure.concurrency.RedisLock;
+import com.commonground.be.global.infrastructure.security.jwt.JwtProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
