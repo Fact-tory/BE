@@ -1,4 +1,4 @@
-package com.commonground.be.domain.news.service;
+package com.commonground.be.domain.news.service.crawling;
 
 import com.commonground.be.domain.news.dto.crawling.RawNewsData;
 import lombok.RequiredArgsConstructor;

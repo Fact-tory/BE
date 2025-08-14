@@ -1,4 +1,4 @@
-package com.commonground.be.domain.news.dto;
+package com.commonground.be.domain.news.entity.metadata;
 
 import java.time.LocalDateTime;
 import java.util.Map;
