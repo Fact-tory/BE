@@ -1,0 +1,13 @@
+# Python 크롤링 워커 의존성
+aio-pika==9.4.3
+aiohttp==3.9.1
+playwright==1.40.0
+pydantic==2.5.2
+python-dotenv==1.0.0
+
+# 로깅 및 유틸리티
+structlog==23.2.0
+colorama==0.4.6
+
+# 선택사항: 모니터링
+prometheus-client==0.19.0
