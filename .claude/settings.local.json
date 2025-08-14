@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(sed:*)",
+      "Bash(./gradlew compileJava:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew:*)",
+      "Bash(docker-compose:*)",
+      "Bash(mysql:*)",
+      "Bash(chmod:*)",
+      "WebFetch(domain:media.naver.com)",
+      "Bash(./scripts/docker-setup.sh:*)",
+      "Bash(ls:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker system:*)",
+      "Bash(docker logs:*)",
+      "Bash(curl:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(sudo lsof:*)",
+      "Bash(./scripts/dev-docker.sh:*)",
+      "Bash(./scripts/dev-app.sh:*)",
+      "Bash(./scripts/fix_opensearch_index.sh:*)",
+      "Bash(./scripts/fix_opensearch_index_simple.sh:*)",
+      "Bash(sudo rabbitmqctl list_queues:*)",
+      "Bash(open http://localhost:15672)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": []
+  }
+}
