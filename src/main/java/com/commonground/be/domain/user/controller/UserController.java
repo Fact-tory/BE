@@ -1,22 +1,22 @@
 package com.commonground.be.domain.user.controller;
 
 
-import static com.commonground.be.global.response.ResponseCodeEnum.SUCCESS_LOGOUT;
-import static com.commonground.be.global.response.ResponseCodeEnum.USER_DELETE_SUCCESS;
-import static com.commonground.be.global.response.ResponseCodeEnum.USER_SUCCESS_GET;
-import static com.commonground.be.global.response.ResponseCodeEnum.USER_UPDATE_SUCCESS;
-import static com.commonground.be.global.response.ResponseUtils.of;
+import static com.commonground.be.global.application.response.ResponseCodeEnum.SUCCESS_LOGOUT;
+import static com.commonground.be.global.application.response.ResponseCodeEnum.USER_DELETE_SUCCESS;
+import static com.commonground.be.global.application.response.ResponseCodeEnum.USER_SUCCESS_GET;
+import static com.commonground.be.global.application.response.ResponseCodeEnum.USER_UPDATE_SUCCESS;
+import static com.commonground.be.global.application.response.ResponseUtils.of;
 
 import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.domain.user.dto.ProfileUpdateRequestDto;
 import com.commonground.be.domain.user.dto.UserResponseDto;
 import com.commonground.be.domain.user.dto.UserRoleDto;
 import com.commonground.be.domain.user.service.UserService;
-import com.commonground.be.global.response.HttpResponseDto;
-import com.commonground.be.global.security.JwtProvider;
-import com.commonground.be.global.security.TokenManager;
-import com.commonground.be.global.security.details.UserDetailsImpl;
-import com.commonground.be.global.security.admin.AdminUserDetails;
+import com.commonground.be.global.application.response.HttpResponseDto;
+import com.commonground.be.global.infrastructure.security.jwt.JwtProvider;
+import com.commonground.be.global.infrastructure.security.jwt.TokenManager;
+import com.commonground.be.global.domain.security.UserDetailsImpl;
+import com.commonground.be.global.domain.security.AdminUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;

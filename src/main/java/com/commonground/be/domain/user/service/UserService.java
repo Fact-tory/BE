@@ -9,8 +9,8 @@ import com.commonground.be.domain.user.dto.UserResponseDto;
 import com.commonground.be.domain.user.entity.User;
 import com.commonground.be.domain.user.repository.UserAdapter;
 import com.commonground.be.domain.user.repository.UserRepository;
-import com.commonground.be.global.exception.UserExceptions;
-import com.commonground.be.global.security.TokenManager;
+import com.commonground.be.global.application.exception.UserExceptions;
+import com.commonground.be.global.infrastructure.security.jwt.TokenManager;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +47,7 @@ public class UserService {
 		userAdapter.isDeleted(user.getUsername());
 
 		// SoftDeleteTimeStamp 편의 메서드 활용
-		user.markAsDeleted();
+		user.softDelete();
 		userAdapter.save(user);
 
 		// 계정 탈퇴 시 모든 토큰 무효화 (TokenManager 활용)
@@ -94,7 +94,7 @@ public class UserService {
 	@Transactional
 	public void forceWithdrawUser(Long userId) {
 		User user = userAdapter.findById(userId);
-		user.markAsDeleted();
+		user.softDelete();
 		userAdapter.save(user);
 		
 		// 해당 사용자의 모든 토큰 무효화

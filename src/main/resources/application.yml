@@ -7,7 +7,7 @@ server:
 # =================================
 # JWT 토큰 보안 설정
 # =================================
-jwt-secret-key: ${JWT_SECRET_KEY}  # JWT 토큰 서명/검증용 비밀키 (최소 256비트 권장)
+jwt-secret-key: ${JWT_SECRET_KEY}  # JWT 토큰 서명/검증용 비밀키 (Base64 인코딩)
 
 jwt:
   access-token:
@@ -54,6 +54,50 @@ kakao:
     url: https://kapi.kakao.com  # 카카오 API 서버 URL (사용자 정보 조회용)
 
 # =================================
+# 네이버 뉴스 API 설정
+# =================================
+naver:
+  api:
+    client-id: ${NAVER_API_CLIENT_ID}  # 네이버 개발자 센터에서 발급받은 클라이언트 ID
+    client-secret: ${NAVER_API_CLIENT_SECRET}  # 네이버 API 클라이언트 시크릿
+    daily-limit: 25000  # 일일 API 호출 제한 (네이버 뉴스 검색 API 기본 제한)
+
+# =================================
+# OpenSearch 검색 엔진 설정
+# =================================
+opensearch:
+  host: ${OPENSEARCH_HOST}  # OpenSearch 서버 주소
+  port: ${OPENSEARCH_PORT}  # OpenSearch 서버 포트
+  scheme: ${OPENSEARCH_SCHEME}  # 프로토콜 (http/https)
+  username: ${OPENSEARCH_USERNAME}  # OpenSearch 사용자명
+  password: ${OPENSEARCH_PASSWORD}  # OpenSearch 비밀번호
+  
+  # 성능 및 모니터링 설정
+  connection:
+    timeout: 5000  # 연결 타임아웃 (5초)
+    socket-timeout: 30000  # 소켓 타임아웃 (30초)
+    max-connections: 50  # 최대 연결 수
+    max-connections-per-route: 10  # 라우트당 최대 연결 수
+  
+  # 인덱싱 성능 설정  
+  indexing:
+    batch-size: 100  # 배치 인덱싱 크기
+    flush-interval: 30s  # 플러시 간격
+    refresh-interval: 30s  # 리프레시 간격 (검색 가능한 시점)
+    
+  # 검색 성능 설정
+  search:
+    default-size: 10  # 기본 검색 결과 크기
+    max-size: 100  # 최대 검색 결과 크기
+    timeout: 10s  # 검색 타임아웃
+    
+  # 모니터링 설정
+  monitoring:
+    enabled: true  # 성능 모니터링 활성화
+    slow-query-threshold: 1000ms  # 느린 쿼리 임계값 (1초)
+    log-level: INFO  # 로그 레벨
+
+# =================================
 # Redis 캐시 만료시간 설정
 # =================================
 redis:
@@ -70,38 +114,67 @@ redis:
 spring:
   # 데이터베이스 연결 설정
   datasource:
-    url: jdbc:mysql://${DB_URL}/factory?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://${DB_URL}/factory
     username: ${DB_USER}  # MySQL 사용자명
     password: ${DB_PASSWORD}  # MySQL 비밀번호
     driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0+ 드라이버
     # HikariCP 커넥션 풀 설정 (성능 최적화)
-    hikari:
-      maximum-pool-size: 20  # 최대 커넥션 수 (동시 접속자 수 고려)
-      minimum-idle: 5  # 최소 유지 커넥션 수 (빠른 응답을 위해)
-      connection-timeout: 30000  # 커넥션 획득 대기시간 (30초)
-      idle-timeout: 600000  # 유휴 커넥션 제거 시간 (10분)
-      max-lifetime: 1800000  # 커넥션 최대 생존시간 (30분)
+#    hikari:
+#      maximum-pool-size: 20  # 최대 커넥션 수 (동시 접속자 수 고려)
+#      minimum-idle: 5  # 최소 유지 커넥션 수 (빠른 응답을 위해)
+#      connection-timeout: 30000  # 커넥션 획득 대기시간 (30초)
+#      idle-timeout: 600000  # 유휴 커넥션 제거 시간 (10분)
+#      max-lifetime: 1800000  # 커넥션 최대 생존시간 (30분)
 
   # Redis 캐시 서버 연결 설정
   data:
     redis:
-      host: ${REDIS_HOST}  # Redis 서버 주소
+      host: ${REDIS_HOSTt}  # Redis 서버 주소
       port: ${REDIS_PORT}  # Redis 서버 포트 (기본: 6379)
       timeout: 3000ms  # Redis 응답 대기시간 (3초)
       repositories:
         enabled: false  # Spring Data Redis Repository 비활성화 (직접 제어)
+    
+    # MongoDB 데이터베이스 연결 설정
+    mongodb:
+      uri: ${MONGODB_URI}  # MongoDB 연결 URI
+      repositories:
+        enabled: true  # Spring Data MongoDB Repository 활성화
+
+  # RabbitMQ 메시지 큐 연결 설정
+  rabbitmq:
+    host: ${RABBITMQ_HOST}  # RabbitMQ 서버 주소
+    port: ${RABBITMQ_PORT}  # RabbitMQ 서버 포트
+    username: ${RABBITMQ_USERNAME}  # RabbitMQ 사용자명
+    password: ${RABBITMQ_PASSWORD}  # RabbitMQ 비밀번호
+    virtual-host: ${RABBITMQ_VHOST}  # 가상 호스트
+    
+    # 연결 설정
+    connection-timeout: 30s  # 연결 타임아웃 (30초)
+    requested-heartbeat: 30s  # 하트비트 간격 (30초)
+    
+    # Publisher 설정
+    publisher-confirm-type: correlated  # Publisher Confirms 활성화
+    publisher-returns: true  # 라우팅 실패시 메시지 반환 활성화
+    
+    # Consumer 설정
+    listener:
+      simple:
+        acknowledge-mode: manual  # 수동 ACK 모드
+        prefetch: 1  # 동시 처리 메시지 수 제한
+        retry:
+          enabled: true  # 재시도 활성화
+          max-attempts: 3  # 최대 재시도 횟수
+          initial-interval: 1000  # 초기 재시도 간격 (밀리초)
+          max-interval: 10000  # 최대 재시도 간격 (밀리초)
+          multiplier: 2.0  # 재시도 간격 증가 배수
 
   # JPA/Hibernate ORM 설정
   jpa:
     hibernate:
       ddl-auto: update  # 엔티티 변경시 테이블 구조 자동 업데이트 (개발용)
-      naming:
-        # 테이블/컬럼명 매핑 전략 (camelCase → snake_case 변환 안함)
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect  # MySQL 8.0 특화 SQL 방언
-        show_sql: ${HIBERNATE_SHOW_SQL:false}  # SQL 로그 출력 여부 (개발시에만 true)
         format_sql: true  # SQL 로그 포맷팅 (가독성 향상)
         use_sql_comments: true  # SQL에 주석 추가 (디버깅용)
         jdbc:
@@ -118,19 +191,45 @@ spring:
   sql:
     init:
       encoding: UTF-8  # SQL 파일 인코딩
+  
+  # Thymeleaf 템플릿 설정 (API 서버이므로 템플릿 체크 비활성화)
+  thymeleaf:
+    check-template-location: false
 
 # =================================
-# 로깅 시스템 설정
+# 로깅 레벨 설정 (불필요한 로그 제거)
 # =================================
 logging:
   level:
-    # 애플리케이션 로그 레벨 (TRACE < DEBUG < INFO < WARN < ERROR)
-    com.commonground.be: ${LOG_LEVEL:INFO}  # 우리 앱 로그 레벨 (개발: DEBUG, 운영: INFO)
-    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}  # Spring Security 로그 (보안 관련)
-    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}  # Hibernate SQL 로그 (성능 디버깅용)
-    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_PARAM_LOG_LEVEL:WARN}  # SQL 파라미터 로그
-  pattern:
-    # 콘솔 출력 형식: [날짜 시간] [스레드명] 로그레벨 클래스명 - 메시지
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    # 파일 출력 형식 (콘솔과 동일)
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    # Spring Data Repository 설정 경고 제거
+    org.springframework.data.repository.config: ERROR
+    org.springframework.data.repository.support: ERROR
+    
+    # Hibernate 상세 로그 제거
+    org.hibernate: WARN
+    org.hibernate.jpa.internal.util.LogHelper: ERROR
+    org.hibernate.Version: ERROR
+    org.hibernate.orm.connections.pooling: ERROR
+    org.hibernate.engine.transaction.jta.platform: ERROR
+    
+    # Netty DNS 경고 제거
+    io.netty.resolver.dns: ERROR
+    
+    # MongoDB Driver 연결 로그 최소화
+    org.mongodb.driver: WARN
+    org.mongodb.driver.client: WARN
+    org.mongodb.driver.cluster: WARN
+    org.mongodb.driver.connection: WARN
+    
+    # Spring Data MongoDB 관련 로그 최소화
+    org.springframework.data.mongodb: INFO
+    org.springframework.boot.autoconfigure.mongo: WARN
+    
+    # 기타 불필요한 로그 제거
+    com.zaxxer.hikari: WARN
+    
+    # OpenSearch 성능 모니터링 로그 설정
+    org.opensearch: INFO
+    org.opensearch.client: INFO
+    org.opensearch.search.query: DEBUG  # 쿼리 성능 분석용
+    com.commonground.be.domain.news.service.OpenSearchIndexingService: DEBUG

@@ -1,0 +1,283 @@
+### ========================================
+### CommonGround BE API 통합 테스트
+### Python-Java 하이브리드 뉴스 크롤링 시스템
+### ========================================
+
+### 1. 관리자 토큰 설정
+# Spring Boot 애플리케이션 실행 시 콘솔 로그에 출력된 관리자 토큰을 설정하세요
+@adminToken = PHpu/oRjsFKDhN6kJtCF5Ij9slbIoT3ITDlYlYIeS3c=
+
+### ========================================
+### 네이버 API 뉴스 수집 (Java 직접 처리)
+### ========================================
+
+### 2. 네이버 API 뉴스 수집 - 오마이뉴스 정치 뉴스
+POST http://localhost:8080/api/v1/news/collect/naver-api
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+{
+   "officeId": "047",
+   "categoryId": "100",
+   "maxArticles": 20,
+   "sessionId": "api-test-session-001"
+}
+
+### 3. 네이버 API 뉴스 수집 - 조선일보 경제 뉴스
+POST http://localhost:8080/api/v1/news/collect/naver-api
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+{
+  "officeId": "023",
+  "categoryId": "101",
+  "maxArticles": 15,
+  "sessionId": "api-test-session-002"
+}
+
+### ========================================
+### Python 하이브리드 크롤링 (RabbitMQ 기반)
+### ========================================
+
+### 4. Python 웹 크롤링 - 오마이뉴스 정치 뉴스
+POST http://localhost:8080/api/v1/news/crawl/naver
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+{
+   "officeId": "047",
+   "categoryId": "100",
+   "maxArticles": 20,
+   "maxScrollAttempts": 6,
+   "sessionId": "crawl-test-session-001"
+}
+
+### 5. Python 웹 크롤링 - 한국일보 사회 뉴스
+POST http://localhost:8080/api/v1/news/crawl/naver
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+{
+  "officeId": "469",
+  "categoryId": "102",
+  "maxArticles": 30,
+  "maxScrollAttempts": 5,
+  "sessionId": "crawl-test-session-002"
+}
+
+### 6. 개선된 텍스트 정제 시스템 테스트
+POST http://localhost:8080/api/v1/news/crawl/naver
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+{
+  "officeId": "047",
+  "categoryId": "100", 
+  "maxArticles": 30,
+  "maxScrollAttempts": 5,
+  "sessionId": "text-cleaning-test"
+}
+
+### ========================================
+### 뉴스 조회 및 검색 API (인증 불필요)
+### ========================================
+
+### 7. 최신 뉴스 조회
+GET http://localhost:8080/api/v1/news/recent?limit=10
+
+### 8. 트렌딩 뉴스 조회
+GET http://localhost:8080/api/v1/news/trending?limit=10
+
+### 9. 카테고리별 뉴스 조회 - 정치
+GET http://localhost:8080/api/v1/news/categories/POLITICS?page=1&limit=10
+
+### 10. 카테고리별 뉴스 조회 - 경제
+GET http://localhost:8080/api/v1/news/categories/ECONOMY?page=1&limit=10
+
+### 11. 키워드 검색
+GET http://localhost:8080/api/v1/news/search?keyword=윤석열&page=1&limit=10
+
+### 12. 뉴스 상세 조회 (newsId를 실제 값으로 변경)
+# GET http://localhost:8080/api/v1/news/{newsId}
+
+### ========================================
+### 뉴스 통계 및 관리 API (관리자 인증 필요)
+### ========================================
+
+### 13. 뉴스 전체 통계 조회
+GET http://localhost:8080/api/v1/news/statistics
+X-Admin-Token: {{adminToken}}
+
+### 14. 카테고리별 통계 조회
+GET http://localhost:8080/api/v1/news/statistics/categories
+X-Admin-Token: {{adminToken}}
+
+### 15. 뉴스 삭제 (newsId를 실제 값으로 변경)
+# DELETE http://localhost:8080/api/v1/news/{newsId}
+# X-Admin-Token: {{adminToken}}
+
+### ========================================
+### OpenSearch 직접 테스트
+### ========================================
+
+### 16. OpenSearch 서버 상태 확인
+GET http://localhost:9200/_cluster/health
+
+### 17. 뉴스 인덱스 상태 확인
+GET http://localhost:9200/news
+
+### 18. 뉴스 인덱스 문서 수 확인
+GET http://localhost:9200/news/_count
+
+### 19. 최신 뉴스 문서 조회 (상위 10개)
+GET http://localhost:9200/news/_search?size=10&sort=crawledAt:desc
+
+### 20. OpenSearch 키워드 검색 (제목과 본문)
+POST http://localhost:9200/news/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "multi_match": {
+      "query": "윤석열",
+      "fields": ["title^2", "content"]
+    }
+  },
+  "size": 5,
+  "sort": [
+    {"publishedAt": {"order": "desc"}}
+  ],
+  "_source": ["title", "authorName", "publishedAt", "category", "url"]
+}
+
+### 21. OpenSearch 카테고리별 검색 (정치 뉴스)
+POST http://localhost:9200/news/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"category": "POLITICS"}}
+      ]
+    }
+  },
+  "size": 10,
+  "sort": [
+    {"publishedAt": {"order": "desc"}}
+  ],
+  "_source": ["title", "authorName", "publishedAt", "category"]
+}
+
+### 22. OpenSearch 특정 기자 기사 검색
+POST http://localhost:9200/news/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "authorName": "박수림"
+    }
+  },
+  "size": 10,
+  "_source": ["title", "authorName", "publishedAt", "url"]
+}
+
+### 23. OpenSearch 날짜 범위 검색 (최근 1일)
+POST http://localhost:9200/news/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "range": {
+      "publishedAt": {
+        "gte": "now-1d"
+      }
+    }
+  },
+  "size": 10,
+  "sort": [
+    {"publishedAt": {"order": "desc"}}
+  ],
+  "_source": ["title", "authorName", "publishedAt"]
+}
+
+### 24. OpenSearch 복합 검색 (키워드 + 카테고리 + 날짜 범위)
+POST http://localhost:9200/news/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "multi_match": {
+            "query": "대통령",
+            "fields": ["title^2", "content"]
+          }
+        },
+        {
+          "term": {
+            "category": "POLITICS"
+          }
+        },
+        {
+          "range": {
+            "publishedAt": {
+              "gte": "now-1d"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "size": 10,
+  "sort": [
+    {"publishedAt": {"order": "desc"}}
+  ],
+  "_source": ["title", "authorName", "publishedAt", "category"]
+}
+
+### ========================================
+### 사용자 관리 API 테스트
+### ========================================
+
+### 25. 사용자 프로필 조회 (인증 필요)
+# GET http://localhost:8080/api/v1/users/profile
+# Authorization: Bearer {your-jwt-token}
+
+### 26. 사용자 프로필 업데이트 (인증 필요)
+# PUT http://localhost:8080/api/v1/users/profile
+# Content-Type: application/json
+# Authorization: Bearer {your-jwt-token}
+# 
+# {
+#   "nickname": "새로운닉네임",
+#   "bio": "자기소개"
+# }
+
+### ========================================
+### 소셜 로그인 테스트
+### ========================================
+
+### 27. 구글 로그인 URL 생성
+GET http://localhost:8080/api/v1/auth/social/google/login
+
+### 28. 카카오 로그인 URL 생성
+GET http://localhost:8080/api/v1/auth/social/kakao/login
+
+### ========================================
+### 테스트 가이드
+### ========================================
+#
+# 1. Spring Boot 애플리케이션을 실행하고 콘솔에서 관리자 토큰을 복사하여 @adminToken에 설정
+# 2. Python 크롤러 서비스가 실행 중인지 확인 (RabbitMQ 연결 필요)
+# 3. OpenSearch 서버가 localhost:9200에서 실행 중인지 확인
+# 4. 뉴스 수집 API (2-6번)를 실행하여 데이터 수집
+# 5. 조회 및 검색 API (7-12번)로 수집된 데이터 확인
+# 6. OpenSearch 직접 테스트 (16-24번)로 인덱싱 상태 확인
+#
+# 참고: 
+# - Python 크롤러가 실행되지 않은 경우 웹 크롤링 API는 실패할 수 있음
+# - API 수집은 Python 크롤러 없이도 동작함
+# - 관리자 토큰은 애플리케이션 재시작 시마다 변경됨

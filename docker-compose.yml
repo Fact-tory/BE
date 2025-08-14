@@ -1,0 +1,199 @@
+# =================================
+# Factory BE 개발환경 전용 Docker Compose
+# 빠른 개발을 위한 최소 서비스 구성
+# =================================
+
+version: '3.8'
+
+services:
+  # =================================
+  # MySQL 8.0 - 메인 데이터베이스만
+  # 개발시 가장 자주 사용하는 필수 서비스
+  # =================================
+  mysql:
+    image: 'mysql:8.0'
+    container_name: factory-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: factory_dev_root
+      MYSQL_DATABASE: factory
+      MYSQL_USER: factory_user
+      MYSQL_PASSWORD: factory_dev_pass
+      TZ: Asia/Seoul
+    ports:
+      - '3307:3306'
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    # 개발환경 최적화 설정 (성능보다 빠른 시작을 우선)
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M
+      - --innodb-log-file-size=32M
+      - --innodb-flush-log-at-trx-commit=2
+      - --sync-binlog=0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+
+  # =================================
+  # Redis 7.0 - 캐시 및 세션 저장소
+  # JWT 토큰 관리 및 캐싱용 필수 서비스
+  # =================================
+  redis:
+    image: 'redis:7.0-alpine'
+    container_name: factory-redis-dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_dev_data:/data
+    # 개발환경용 간단한 Redis 설정 (설정 파일 없이)
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 3
+      interval: 5s
+
+  # =================================
+  # MongoDB 7.0 - 뉴스 데이터 저장소 
+  # 기사, 언론사, 기자 정보 저장용
+  # =================================
+  mongodb:
+    image: 'mongo:7.0'
+    container_name: factory-mongodb-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: factory_dev_mongo
+      MONGO_INITDB_DATABASE: factory
+      TZ: Asia/Seoul
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_dev_data:/data/db
+      - ./docker/mongodb/init:/docker-entrypoint-initdb.d
+    # 개발환경 최적화 설정
+    command: >
+      mongod
+      --wiredTigerCacheSizeGB 0.25
+      --slowms 1000
+      --profile 1
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+
+  # =================================
+  # RabbitMQ 3.12 - 메시지 큐 브로커
+  # Python 크롤러와 Java 백엔드 간 비동기 통신용
+  # =================================
+  rabbitmq:
+    image: 'rabbitmq:3.12-management'
+    container_name: factory-rabbitmq-dev
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+      TZ: Asia/Seoul
+    ports:
+      - '5672:5672'    # AMQP 포트
+      - '15672:15672'  # 관리 UI 포트 (http://localhost:15672)
+    volumes:
+      - rabbitmq_dev_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+
+  # =================================
+  # OpenSearch 2.12 - 뉴스 검색 엔진  
+  # 한글 텍스트 검색 및 성능 분석용 (개발환경 최적화)
+  # =================================
+  opensearch:
+    image: 'opensearchproject/opensearch:2.12.0'
+    container_name: factory-opensearch-dev
+    restart: unless-stopped
+    environment:
+      # 단일 노드 클러스터 설정 (개발용)
+      discovery.type: single-node
+      # 보안 설정 - 완전 비활성화  
+      DISABLE_SECURITY_PLUGIN: true
+      DISABLE_INSTALL_DEMO_CONFIG: true
+      # 메모리 설정 (개발환경 최적화)
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    volumes:
+      - opensearch_dev_data:/usr/share/opensearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      timeout: 10s
+      retries: 5
+      interval: 15s
+
+  # =================================
+  # OpenSearch Dashboards - 검색 성능 모니터링 (선택사항)
+  # 개발시 검색 쿼리 분석 및 인덱스 관리용
+  # =================================
+  opensearch-dashboards:
+    image: 'opensearchproject/opensearch-dashboards:2.12.0'
+    container_name: factory-dashboards-dev
+    restart: unless-stopped
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: true
+    ports:
+      - '5601:5601'
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      timeout: 10s
+      retries: 5
+      interval: 15s
+
+# =================================
+# 개발환경 전용 볼륨
+# 더 작은 용량으로 빠른 I/O
+# =================================
+volumes:
+  mysql_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  mongodb_dev_data:
+    driver: local
+  rabbitmq_dev_data:
+    driver: local
+  opensearch_dev_data:
+    driver: local
+
+# =================================
+# 개발환경 네트워크
+# =================================
+networks:
+  default:
+    name: factory-dev-network
+    driver: bridge

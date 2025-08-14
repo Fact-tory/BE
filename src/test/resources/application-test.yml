@@ -1,0 +1,83 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        show_sql: true
+        format_sql: true
+    open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    user:
+      name: test
+      password: test
+
+# JWT 설정
+jwt-secret-key: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdGVzdGluZy0xMjM0NTY3ODkw
+jwt:
+  access-token:
+    expiration: 1800  # 30분
+  refresh-token:
+    expiration: 86400  # 24시간
+
+# 소셜 로그인 테스트 설정
+google:
+  auth:
+    url: https://accounts.google.com
+    client-id: test-google-client-id
+    client-secret: test-google-client-secret
+    redirect-uri: http://localhost:8080/auth/google/callback
+  api:
+    url: https://www.googleapis.com
+
+kakao:
+  auth:
+    url: https://kauth.kakao.com
+    client-id: test-kakao-client-id
+    redirect-uri: http://localhost:8080/auth/kakao/callback
+  api:
+    url: https://kapi.kakao.com
+
+# 관리자 토큰 설정
+admin:
+  master-token: test-admin-master-token
+  token:
+    identifier: test-admin-identifier
+  session:
+    expiration: 3600
+    max-concurrent: 1
+
+# 암호화 설정
+encryption:
+  field:
+    secret-key: test-encryption-secret-key-32-chars
+
+# Redis 캐시 설정
+redis:
+  expiration:
+    refresh-token: 1209600
+    kakao-tid: 180
+    user-session: 3600
+    verification-code: 300
+
+# 서버 설정
+server:
+  port: 8080
+
+# 로깅 설정
+logging:
+  level:
+    com.commonground.be: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN

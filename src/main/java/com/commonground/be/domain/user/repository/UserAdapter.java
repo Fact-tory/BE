@@ -2,7 +2,7 @@ package com.commonground.be.domain.user.repository;
 
 import com.commonground.be.domain.user.entity.User;
 import com.commonground.be.domain.user.utils.UserIdentity;
-import com.commonground.be.global.exception.UserExceptions;
+import com.commonground.be.global.application.exception.UserExceptions;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -19,7 +19,7 @@ public class UserAdapter {
 	private final UserRepository userRepository;
 
 	public User findByUsername(String username) {
-		return userRepository.findByUsername(username)
+		return userRepository.findByUsernameAndDeletedAtIsNull(username)
 				.orElseThrow(UserExceptions::userNotFound);
 	}
 
@@ -28,11 +28,11 @@ public class UserAdapter {
 	}
 
 	public boolean existsByUsername(String username) {
-		return userRepository.existsByUsername(username);
+		return userRepository.existsByUsernameAndDeletedAtIsNull(username);
 	}
 
 	public User findById(Long id) {
-		return userRepository.findById(id)
+		return userRepository.findByIdAndDeletedAtIsNull(id)
 				.orElseThrow(UserExceptions::userNotFound);
 	}
 
@@ -52,7 +52,7 @@ public class UserAdapter {
 	}
 
 	public User findUserByUsernameAndNameAndEmail(UserIdentity userIdentity) {
-		return userRepository.findUserByUsernameAndNameAndEmail(
+		return userRepository.findUserByUsernameAndNameAndEmailAndDeletedAtIsNull(
 						userIdentity.getUsername(), userIdentity.getName(), userIdentity.getEmail())
 				.orElseThrow(
 						UserExceptions::userNotFound

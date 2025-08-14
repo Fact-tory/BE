@@ -2,12 +2,12 @@ package com.commonground.be.domain.auth.controller;
 
 import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.domain.user.utils.UserRole;
-import com.commonground.be.global.exception.AuthExceptions;
-import com.commonground.be.global.response.HttpResponseDto;
-import com.commonground.be.global.response.ResponseCodeEnum;
-import com.commonground.be.global.response.ResponseUtils;
-import com.commonground.be.global.security.JwtProvider;
-import com.commonground.be.global.security.TokenManager;
+import com.commonground.be.global.application.exception.AuthExceptions;
+import com.commonground.be.global.application.response.HttpResponseDto;
+import com.commonground.be.global.application.response.ResponseCodeEnum;
+import com.commonground.be.global.application.response.ResponseUtils;
+import com.commonground.be.global.infrastructure.security.jwt.JwtProvider;
+import com.commonground.be.global.infrastructure.security.jwt.TokenManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
@@ -107,6 +107,9 @@ public class AuthController {
 
 		// 8. 새로운 Refresh Token을 쿠키에 설정
 		jwtProvider.setRefreshTokenCookie(response, newRefreshToken);
+
+		// 9. Authorization 헤더에 새로운 Access Token 설정
+		response.setHeader("Authorization", newAccessToken);
 
 		log.info("토큰 재발급 완료 - username: {}, sessionId: {}", username, sessionId);
 		return ResponseUtils.of(

@@ -1,0 +1,143 @@
+# =================================
+# Factory BE Simple CI 
+# 빠른 검증을 위한 간소화된 CI
+# =================================
+
+name: Simple CI
+
+on:
+  push:
+    branches: [ develop, feature/*, fix/*, refactor/* ]
+  pull_request:
+    branches: [ main ]
+
+# 동시 실행 제한
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =================================
+  # 빠른 검증 (코드 컴파일 + 기본 테스트)
+  # =================================
+  quick-check:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: wrapper
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Validate Gradle wrapper
+      uses: gradle/wrapper-validation-action@v1
+    
+    # 컴파일 검증
+    - name: Compile code
+      run: ./gradlew compileJava compileTestJava
+    
+    # 빠른 테스트 실행 (H2 사용)
+    - name: Run unit tests
+      run: ./gradlew test -Dspring.profiles.active=test --continue
+      env:
+        # H2 인메모리 DB 사용으로 빠른 테스트
+        SPRING_PROFILES_ACTIVE: test
+        JWT_SECRET_KEY: test-jwt-secret-for-ci-testing-32chars
+        ENCRYPTION_SECRET_KEY: test-encryption-key-32-chars-long
+        ADMIN_MASTER_TOKEN: test-admin-token
+        ADMIN_TOKEN_IDENTIFIER: test-admin
+        # 외부 의존성 더미 값
+        NAVER_API_CLIENT_ID: dummy_client_id
+        NAVER_API_CLIENT_SECRET: dummy_client_secret
+        GOOGLE_CLIENT_ID: dummy_google_id
+        GOOGLE_CLIENT_SECRET: dummy_google_secret
+        KAKAO_CLIENT_ID: dummy_kakao_id
+    
+    # 테스트 결과 업로드
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          build/reports/tests/test/
+          build/test-results/test/
+        retention-days: 7
+
+    # 실패시 Slack 알림 (선택사항)
+    - name: Notify on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: |
+          ❌ Factory BE 빠른 검증 실패
+          브랜치: ${{ github.ref_name }}
+          커밋: ${{ github.sha }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # =================================
+  # 코드 품질 체크 (병렬 실행)
+  # =================================
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    # 빌드와 JaCoCo 리포트 생성
+    - name: Build and generate reports
+      run: ./gradlew build jacocoTestReport --continue
+      env:
+        SPRING_PROFILES_ACTIVE: test
+        JWT_SECRET_KEY: test-jwt-secret-for-quality-check
+        ENCRYPTION_SECRET_KEY: test-encryption-key-32-chars-long
+    
+    # SonarQube 분석 (선택사항 - 토큰이 있을 때만)
+    - name: SonarQube Scan
+      if: env.SONAR_TOKEN != ''
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: ./gradlew sonar
+    
+    # 코드 커버리지 업로드
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      with:
+        file: build/reports/jacoco/test/jacocoTestReport.xml
+        flags: unittests
+        name: factory-be-coverage
