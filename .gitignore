@@ -35,3 +35,15 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment and Development Tools ###
+.env*
+.claude/
+CLAUDE.md
+http-client.env.json
+*_env.json
+
+### HTTP Test Files ###
+debug_*.http
+test_*.http
+api-test-*.http

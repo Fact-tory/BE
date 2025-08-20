@@ -1,7 +1,6 @@
 package com.commonground.be.global.infrastructure.security.filter;
 
 
-import com.commonground.be.domain.session.service.SessionService;
 import com.commonground.be.global.application.response.HttpResponseDto;
 import com.commonground.be.global.domain.security.AdminUserDetails;
 import com.commonground.be.global.infrastructure.security.admin.AdminTokenValidator;
@@ -9,6 +8,8 @@ import com.commonground.be.global.infrastructure.security.jwt.JwtProvider;
 import com.commonground.be.global.infrastructure.security.jwt.TokenManager;
 import com.commonground.be.global.infrastructure.security.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,7 +31,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
 	private final JwtProvider jwtProvider;
-	private final SessionService sessionService;
 	private final TokenManager tokenManager;
 	private final AdminTokenValidator adminTokenValidator;
 	private final CustomUserDetailsService userDetailsService;
@@ -49,30 +49,83 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 		// 1. X-Admin-Token을 먼저 확인 (관리자 토큰 우선 처리)
 		String token = req.getHeader(AdminTokenValidator.ADMIN_TOKEN_HEADER);
 
-		// 2. 없다면 Authorization 헤더 확인 (일반 JWT 토큰)
+		// 2. 없다면 Authorization 헤더 또는 쿠키에서 확인 (일반 JWT 토큰)
 		if (!StringUtils.hasText(token)) {
+			log.info("🔍 Authorization 헤더에서 토큰 추출 시도");
 			token = jwtProvider.getAccessTokenFromHeader(req);
+			if (StringUtils.hasText(token)) {
+				log.info("✅ Authorization 헤더에서 토큰 발견");
+			} else {
+				log.info("🔍 Authorization 헤더에 토큰 없음, 쿠키에서 찾기 시도");
+			}
+			
+			// 헤더에 없으면 쿠키에서 찾기
+			if (!StringUtils.hasText(token)) {
+				if (req.getCookies() != null) {
+					log.info("🔍 쿠키 개수: {}", req.getCookies().length);
+					for (jakarta.servlet.http.Cookie cookie : req.getCookies()) {
+						log.debug("🔍 쿠키 확인: {} = {}", cookie.getName(), 
+							cookie.getValue().length() > 20 ? cookie.getValue().substring(0, 20) + "..." : cookie.getValue());
+						if ("AccessToken".equals(cookie.getName())) {
+							token = cookie.getValue();
+							log.info("✅ AccessToken 쿠키에서 토큰 발견");
+							break;
+						}
+					}
+					if (!StringUtils.hasText(token)) {
+						log.info("❌ AccessToken 쿠키에 토큰 없음");
+					}
+				} else {
+					log.info("❌ 요청에 쿠키가 없음");
+				}
+			}
+		} else {
+			log.info("✅ X-Admin-Token 헤더에서 토큰 발견");
 		}
 
 		// 토큰이 헤더에 존재하는 경우
 		if (StringUtils.hasText(token)) {
-			// 2-1. 관리자 토큰인지 먼저 검증
-			if (adminTokenValidator.isValidAdminToken(token)) {
-				setAdminAuthentication();
-				log.info("관리자 토큰으로 인증 성공 - URI: {}", req.getRequestURI());
+			log.info("🔍 토큰 발견 - URI: {}, 토큰 시작: {}", req.getRequestURI(), token.substring(0, Math.min(token.length(), 20)) + "...");
+			
+			// X-Admin-Token 헤더로 온 경우는 관리자 토큰으로 바로 처리
+			boolean isAdminTokenHeader = StringUtils.hasText(req.getHeader(AdminTokenValidator.ADMIN_TOKEN_HEADER));
+			log.info("🔍 토큰 타입 검사 - isAdminTokenHeader: {}", isAdminTokenHeader);
+			
+			if (isAdminTokenHeader) {
+				// 관리자 토큰 검증
+				log.info("🔍 관리자 토큰 검증 시작");
+				if (adminTokenValidator.isValidAdminToken(token)) {
+					setAdminAuthentication();
+					log.info("✅ 관리자 토큰으로 인증 성공 - URI: {}", req.getRequestURI());
+				} else {
+					log.warn("❌ 관리자 토큰 검증 실패 - URI: {}", req.getRequestURI());
+					jwtExceptionHandler(res, HttpStatus.UNAUTHORIZED, "유효하지 않은 관리자 토큰입니다.");
+					return;
+				}
+			} else {
+				// JWT 토큰을 먼저 검증 (일반적인 경우)
+				log.info("🔍 JWT 토큰 검증 시작");
+				if (validateTokenAndSession(token, res)) {
+					setAuthentication(token);
+					log.info("✅ OAuth2 JWT 토큰으로 인증 성공 - URI: {}", req.getRequestURI());
+				}
+				// JWT 토큰이 아닌 경우 관리자 토큰으로 재시도
+				else {
+					log.info("🔍 JWT 토큰 검증 실패, 관리자 토큰으로 재시도");
+					if (adminTokenValidator.isValidAdminToken(token)) {
+						setAdminAuthentication();
+						log.info("✅ 관리자 토큰으로 인증 성공 - URI: {}", req.getRequestURI());
+					}
+					// 어떤 토큰으로도 유효하지 않은 경우
+					else {
+						log.warn("❌ 토큰 검증 실패 (JWT와 관리자 토큰 모두 실패) - URI: {}", req.getRequestURI());
+						jwtExceptionHandler(res, HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다.");
+						return; // 필터 체인 종료
+					}
+				}
 			}
-			// 2-2. 일반 JWT 토큰인지 검증
-			else if (validateTokenAndSession(token, res)) {
-				setAuthentication(token);
-				log.debug("OAuth2 JWT 토큰으로 인증 성공");
-			}
-			// 2-3. 어떤 토큰으로도 유효하지 않은 경우
-			else {
-				// Bearer 토큰이 아니거나, 유효하지 않은 토큰일 경우
-				// (adminTokenValidator.isValidAdminToken 에서 이미 Bearer 접두사를 처리해주므로 추가 검증 불필요)
-				jwtExceptionHandler(res, HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다.");
-				return; // 필터 체인 종료
-			}
+		} else {
+			log.info("🔍 토큰 없음 - URI: {} (공개 접근 또는 인증 불필요)", req.getRequestURI());
 		}
 		// 토큰이 아예 없는 요청은 그냥 통과시킨다 (이후 Spring Security의 .hasRole() 등에서 차단)
 
@@ -85,13 +138,21 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	private void setAuthentication(String token) {
 		try {
 			String username = jwtProvider.getUsernameFromToken(token);
-			String sessionId = jwtProvider.getClaimFromToken(token, "sessionId");
+			log.debug("JWT 토큰에서 추출한 username: {}", username);
+			
+			// JWT 토큰에서 이메일과 이름 추출 (세션 ID 제거)
+			String email = jwtProvider.getClaimFromToken(token, "email");
+			String name = jwtProvider.getClaimFromToken(token, "name");
 
-			// UserDetailsService를 통해 UserDetails 생성
+			// UserDetailsService를 통해 UserDetails 생성 (단순화)
 			UserDetails userDetails;
-			if (sessionId != null) {
-				userDetails = userDetailsService.loadUserByUsernameWithSession(username, sessionId);
+			
+			// 이메일과 이름이 모두 있는 경우 더 정확한 매칭 사용
+			if (email != null && name != null) {
+				log.debug("이메일과 이름으로 UserDetails 로드: email={}, name={}", email, name);
+				userDetails = userDetailsService.loadUserByEmailAndName(email, name);
 			} else {
+				log.debug("기본 UserDetails 로드: username={}", username);
 				userDetails = userDetailsService.loadUserByUsername(username);
 			}
 
@@ -103,10 +164,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 			context.setAuthentication(authentication);
 			SecurityContextHolder.setContext(context);
 
-			log.debug("JWT 토큰 UserDetails 인증 설정 완료: username={}", username);
+			log.info("✅ JWT 토큰 UserDetails 인증 설정 완료: username={}, authorities={}", 
+				username, userDetails.getAuthorities());
 
 		} catch (Exception e) {
-			log.error("JWT 토큰에서 UserDetails 생성 실패: {}", e.getMessage());
+			log.error("❌ JWT 토큰에서 UserDetails 생성 실패: {}", e.getMessage());
+			// 사용자를 찾을 수 없는 경우 인증 실패로 처리하지만 예외를 던지지 않음
+			// Spring Security가 이후 인증 체크에서 처리하도록 함
 		}
 	}
 
@@ -136,57 +200,36 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * 토큰 및 세션 유효성 검증
+	 * 간소화된 JWT 토큰 유효성 검증
 	 */
 	private boolean validateTokenAndSession(String token, HttpServletResponse res) {
 		try {
-			// 1. 기본 토큰 유효성 검증
+			log.info("🔍 JWT 토큰 유효성 검증 시작");
+			
+			// JWT 기본 유효성 검증만 수행 (세션 검증 제거)
 			if (!jwtProvider.validateAccessToken(token)) {
+				log.warn("❌ JWT 토큰 유효성 검증 실패");
 				return false;
 			}
-
-			// 2. 토큰 버전 검증 (TokenManager 활용)
+			
+			// 사용자명 추출 가능성 확인
 			String username = jwtProvider.getUsernameFromToken(token);
-			String tokenVersionStr = jwtProvider.getClaimFromToken(token, "tokenVersion");
-			if (tokenVersionStr != null) {
-				Long tokenVersion = Long.parseLong(tokenVersionStr);
-				if (!tokenManager.isTokenVersionValid(username, tokenVersion)) {
-					log.warn("토큰 버전 무효: user={}, tokenVersion={}", username, tokenVersion);
-					return false;
-				}
-			}
-
-			// 3. 세션 ID 추출 및 세션 유효성 검증
-			String sessionId = extractSessionId(token);
-			if (sessionId != null) {
-				if (sessionService.validateSession(sessionId)) {
-					// 세션 마지막 접근 시간 업데이트
-					sessionService.updateSessionAccess(sessionId);
-					return true;
-				}
+			log.info("🔍 토큰에서 추출된 username: {}", username);
+			
+			if (username == null || username.trim().isEmpty()) {
+				log.warn("❌ 토큰에서 사용자명 추출 실패");
 				return false;
 			}
-
-			// 4. 레거시 토큰 (세션 ID 없음) - 기존 로직 유지
+			
+			log.info("✅ JWT 토큰 검증 성공 - user: {}", username);
 			return true;
 
 		} catch (Exception e) {
-			log.error("토큰 검증 중 오류: {}", e.getMessage());
+			log.error("❌ 토큰 검증 중 오류: {}", e.getMessage(), e);
 			return false;
 		}
 	}
 
-	/**
-	 * JWT에서 세션 ID 추출
-	 */
-	private String extractSessionId(String token) {
-		try {
-			return jwtProvider.getClaimFromToken(token, "sessionId");
-		} catch (Exception e) {
-			// 세션 ID가 없는 레거시 토큰
-			return null;
-		}
-	}
 
 	/**
 	 * 인증이 필요하지 않은 공개 경로인지 확인 OAuth2 소셜 로그인 및 공개 API 경로들을 포함
@@ -197,7 +240,12 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 			return true;
 		}
 
-		// 토큰 재발급 경로
+		// OAuth2 API 로그인 경로 (validate는 인증 필요하므로 제외)
+		if (requestURI.equals("/api/v1/auth/oauth2/login")) {
+			return true;
+		}
+
+		// 토큰 재발급 경로 (쿠키에서 refresh token 읽어야 하므로 공개)
 		if (requestURI.equals("/api/v1/auth/reissue")) {
 			return true;
 		}

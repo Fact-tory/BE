@@ -20,4 +20,8 @@ public class AuthExceptions {
 		return new CommonException(ResponseExceptionEnum.FAIL_TO_CHANGE_ROLE);
 	}
 
+	public static CommonException authenticationRequired() {
+		return new CommonException(ResponseExceptionEnum.UNAUTHORIZED_ACCESS);
+	}
+
 }

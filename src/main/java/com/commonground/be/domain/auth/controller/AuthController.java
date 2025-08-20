@@ -1,120 +1,142 @@
 package com.commonground.be.domain.auth.controller;
 
-import com.commonground.be.domain.session.service.SessionService;
-import com.commonground.be.domain.user.utils.UserRole;
-import com.commonground.be.global.application.exception.AuthExceptions;
+import com.commonground.be.domain.auth.dto.request.LogoutRequest;
+import com.commonground.be.domain.auth.dto.request.WithdrawRequest;
+import com.commonground.be.domain.auth.facade.AuthFacade;
 import com.commonground.be.global.application.response.HttpResponseDto;
 import com.commonground.be.global.application.response.ResponseCodeEnum;
 import com.commonground.be.global.application.response.ResponseUtils;
-import com.commonground.be.global.infrastructure.security.jwt.JwtProvider;
-import com.commonground.be.global.infrastructure.security.jwt.TokenManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
+/**
+ * OAuth2 소셜로그인 기반 인증 컨트롤러
+ * 실제 OAuth2 로그인은 Spring Security가 자동 처리 (/oauth2/authorization/{provider})
+ * 이 컨트롤러는 인증 후 사용자 관리 API만 제공
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
-	private final JwtProvider jwtProvider;
-	private final TokenManager tokenManager;
-	private final SessionService sessionService;
+	private final AuthFacade authFacade;
 
 	/**
-	 * Access Token 재발급 (OAuth2 방식) POST /api/v1/auth/reissue
+	 * 토큰 재발급
+	 * POST /api/v1/auth/reissue
 	 */
 	@PostMapping("/reissue")
 	public ResponseEntity<HttpResponseDto> reissueAccessToken(
 			HttpServletRequest request,
 			HttpServletResponse response
 	) {
-		log.info("토큰 재발급 요청");
+		log.info("🔄 [CONTROLLER] 토큰 재발급 요청 - URI: {}, Method: {}, Client-IP: {}", 
+				request.getRequestURI(), request.getMethod(), getClientIp(request));
 
-		// 1. 쿠키에서 Refresh Token 추출
-		String refreshToken = jwtProvider.getRefreshTokenFromCookie(request);
-		if (refreshToken == null) {
-			log.warn("Refresh Token이 쿠키에 없음");
-			throw AuthExceptions.invalidRefreshToken();
-		}
+		try {
+			// 🔄 Facade를 통한 토큰 재발급 파이프라인
+			AuthFacade.AuthFlowResult flowResult = authFacade.reissueTokenFlow(request, response);
 
-		// 2. Refresh Token 검증
-		if (!jwtProvider.validateAccessToken(refreshToken)) {
-			log.warn("유효하지 않은 Refresh Token");
-			throw AuthExceptions.invalidRefreshToken();
-		}
-
-		// 3. 토큰에서 사용자 정보 추출
-		String username = jwtProvider.getUsernameFromToken(refreshToken);
-		String roleStr = jwtProvider.getClaimFromToken(refreshToken, "auth");
-		String sessionId = jwtProvider.getClaimFromToken(refreshToken, "sessionId");
-		String tokenId = jwtProvider.getClaimFromToken(refreshToken, "tokenId");
-
-		if (username == null) {
-			log.warn("Refresh Token에서 사용자 정보 추출 실패");
-			throw AuthExceptions.invalidRefreshToken();
-		}
-
-		// 4. 세션 유효성 검증 (세션 ID가 있는 경우)
-		if (sessionId != null && !sessionService.validateSession(sessionId)) {
-			log.warn("유효하지 않은 세션 - sessionId: {}", sessionId);
-			throw AuthExceptions.invalidRefreshToken();
-		}
-
-		// 5. 토큰 버전 검증
-		String tokenVersionStr = jwtProvider.getClaimFromToken(refreshToken, "tokenVersion");
-		if (tokenVersionStr != null) {
-			Long tokenVersion = Long.parseLong(tokenVersionStr);
-			if (!tokenManager.isTokenVersionValid(username, tokenVersion)) {
-				log.warn("유효하지 않은 토큰 버전 - username: {}, version: {}", username, tokenVersion);
-				throw AuthExceptions.invalidRefreshToken();
+			if (flowResult.isSuccess()) {
+				log.info("✅ [CONTROLLER] 토큰 재발급 성공 - Client-IP: {}", getClientIp(request));
+				return ResponseUtils.of(ResponseCodeEnum.SUCCESS, flowResult.getData());
+			} else {
+				log.warn("❌ [CONTROLLER] 토큰 재발급 실패 - Client-IP: {}, 오류: {}", 
+						getClientIp(request), flowResult.getMessage());
+				return ResponseUtils.of(ResponseCodeEnum.UNAUTHORIZED_ACCESS, 
+						Map.of("message", flowResult.getMessage(), "success", false));
 			}
+		} catch (Exception e) {
+			log.error("💥 [CONTROLLER] 토큰 재발급 처리 중 예외 발생 - Client-IP: {}, 오류: {}", 
+					getClientIp(request), e.getMessage(), e);
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR, 
+					Map.of("message", "토큰 재발급 처리 중 오류가 발생했습니다.", "success", false, "error", e.getMessage()));
 		}
+	}
 
-		// 6. 기존 Refresh Token 무효화 (로테이션)
-		if (tokenId != null) {
-			tokenManager.invalidateToken(tokenId);
-			log.debug("기존 Refresh Token 무효화 - tokenId: {}", tokenId);
+	/**
+	 * 클라이언트 IP 추출 (디버깅용)
+	 */
+	private String getClientIp(HttpServletRequest request) {
+		String xForwardedFor = request.getHeader("X-Forwarded-For");
+		if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+			return xForwardedFor.split(",")[0].trim();
 		}
+		String xRealIp = request.getHeader("X-Real-IP");
+		if (xRealIp != null && !xRealIp.isEmpty()) {
+			return xRealIp;
+		}
+		return request.getRemoteAddr();
+	}
 
-		// 7. 새로운 토큰 쌍 생성
-		UserRole userRole = UserRole.valueOf(roleStr);
+	/**
+	 * 현재 사용자 정보 조회
+	 * GET /api/v1/auth/me
+	 */
+	@GetMapping("/me")
+	public ResponseEntity<HttpResponseDto> getCurrentUser(
+			@AuthenticationPrincipal UserDetails userDetails
+	) {
+		// 👤 Facade를 통한 사용자 정보 조회 파이프라인
+		AuthFacade.AuthFlowResult flowResult = authFacade.getCurrentUserFlow(userDetails);
 
-		String newAccessToken;
-		String newRefreshToken;
+		ResponseCodeEnum responseCode = flowResult.isSuccess() ? ResponseCodeEnum.SUCCESS
+				: ResponseCodeEnum.UNAUTHORIZED_ACCESS;
+		return ResponseUtils.of(responseCode, flowResult.getData());
+	}
 
-		if (sessionId != null) {
-			// 세션이 있는 경우 - 세션 ID 포함하여 생성
-			newAccessToken = jwtProvider.createAccessTokenWithSession(username, userRole,
-					sessionId);
-			newRefreshToken = jwtProvider.createRefreshTokenWithSession(username, userRole,
-					sessionId);
+	/**
+	 * 통합 로그아웃 (일반 로그아웃)
+	 * POST /api/v1/auth/logout
+	 */
+	@PostMapping("/logout")
+	public ResponseEntity<HttpResponseDto> logout(
+			@AuthenticationPrincipal UserDetails userDetails,
+			@RequestBody(required = false) LogoutRequest logoutRequest,
+			HttpServletRequest request,
+			HttpServletResponse response
+	) {
+		// 🚪 Facade를 통한 통합 로그아웃 파이프라인
+		AuthFacade.AuthFlowResult flowResult = authFacade.logoutFlow(userDetails, logoutRequest,
+				request, response);
 
-			// 세션 마지막 접근 시간 업데이트
-			sessionService.updateSessionAccess(sessionId);
+		ResponseCodeEnum responseCode = flowResult.isSuccess() ? ResponseCodeEnum.SUCCESS
+				: ResponseCodeEnum.INTERNAL_SERVER_ERROR;
+		return ResponseUtils.of(responseCode, Map.of("message", flowResult.getMessage()));
+	}
+
+	// 회원탈퇴 기능 제거 - 소셜 로그인 전용 서비스
+	// 데이터 보관 정책: 약관을 통한 정기적 정리 예정
+
+	/**
+	 * 토큰 검증 (선택사항 - 프론트엔드에서 토큰 상태 확인용)
+	 * GET /api/v1/auth/validate
+	 */
+	@GetMapping("/validate")
+	public ResponseEntity<HttpResponseDto> validateToken(
+			@AuthenticationPrincipal UserDetails userDetails
+	) {
+		// 인증된 사용자라면 토큰이 유효함
+		if (userDetails != null) {
+			return ResponseUtils.of(ResponseCodeEnum.SUCCESS, Map.of(
+					"valid", true,
+					"username", userDetails.getUsername(),
+					"authorities", userDetails.getAuthorities()
+			));
 		} else {
-			// 레거시 토큰인 경우
-			newAccessToken = jwtProvider.createAccessToken(username, userRole);
-			newRefreshToken = jwtProvider.createRefreshToken(username, userRole);
+			return ResponseUtils.of(ResponseCodeEnum.UNAUTHORIZED_ACCESS, Map.of(
+					"valid", false,
+					"message", "토큰이 유효하지 않습니다."
+			));
 		}
-
-		// 8. 새로운 Refresh Token을 쿠키에 설정
-		jwtProvider.setRefreshTokenCookie(response, newRefreshToken);
-
-		// 9. Authorization 헤더에 새로운 Access Token 설정
-		response.setHeader("Authorization", newAccessToken);
-
-		log.info("토큰 재발급 완료 - username: {}, sessionId: {}", username, sessionId);
-		return ResponseUtils.of(
-				ResponseCodeEnum.REISSUE_ACCESS_TOKEN,
-				Map.of("accessToken", newAccessToken)
-		);
 	}
 }
