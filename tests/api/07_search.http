@@ -1,0 +1,86 @@
+### 🔍 7. 검색 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+@adminToken = q8qAG4YoEC6t2z7P4pJyUazZ30bIiYkq9PFp3ac9uVo=
+
+### 7.1 통합 뉴스 검색 (기본)
+GET {{baseUrl}}/search/news?q=정치
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+### 7.2 통합 뉴스 검색 (페이징)
+GET {{baseUrl}}/search/news?q=economy&page=1&size=10
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+### 7.3 통합 뉴스 검색 (카테고리 필터)
+GET {{baseUrl}}/search/news?q=코로나&category=SOCIETY&size=20
+
+### 7.4 통합 뉴스 검색 (편향성 필터)
+GET {{baseUrl}}/search/news?q=정책&bias=neutral&size=15
+
+### 7.5 통합 뉴스 검색 (정렬 옵션)
+GET {{baseUrl}}/search/news?q=부동산&sort=latest&size=25
+
+### 7.6 통합 뉴스 검색 (복합 필터)
+GET {{baseUrl}}/search/news?q=경제정책&category=ECONOMY&bias=progressive&sort=trending&page=1&size=20
+
+### 7.7 통합 뉴스 검색 (한글 키워드)
+GET {{baseUrl}}/search/news?q=대통령선거&page=1&size=30
+
+### 7.8 통합 뉴스 검색 (영문 키워드)
+GET {{baseUrl}}/search/news?q=COVID-19&page=1&size=15
+
+### 7.9 통합 뉴스 검색 (복합 키워드)
+GET {{baseUrl}}/search/news?q=미국%20대선&page=1&size=10
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+### 7.10 통합 뉴스 검색 (빈 키워드 - 실패 예상)
+GET {{baseUrl}}/search/news?q=
+
+### 7.11 내 분석 검색 (기본)
+GET {{baseUrl}}/search/my-analyses?q=정치
+Authorization: Bearer {{accessToken}}
+
+### 7.12 내 분석 검색 (페이징)
+GET {{baseUrl}}/search/my-analyses?q=경제&page=2&size=10
+Authorization: Bearer {{accessToken}}
+
+### 7.13 내 분석 검색 (많은 결과)
+GET {{baseUrl}}/search/my-analyses?q=분석&page=1&size=50
+Authorization: Bearer {{accessToken}}
+
+### 7.14 내 분석 검색 (권한 없이 - 실패 예상)
+GET {{baseUrl}}/search/my-analyses?q=정치
+
+### 7.15 인기 검색어 (기본)
+GET {{baseUrl}}/search/popular
+
+### 7.16 인기 검색어 (제한된 개수)
+GET {{baseUrl}}/search/popular?limit=5
+
+### 7.17 인기 검색어 (많은 개수)
+GET {{baseUrl}}/search/popular?limit=20
+
+### 7.18 인기 검색어 (최대 개수 초과)
+GET {{baseUrl}}/search/popular?limit=100
+
+### 7.19 실시간 검색어 순위
+GET {{baseUrl}}/search/realtime-popular
+
+### 7.20 검색 자동완성
+GET {{baseUrl}}/search/autocomplete?q=정
+
+### 7.21 검색 자동완성 (더 긴 키워드)
+GET {{baseUrl}}/search/autocomplete?q=코로나
+
+### 7.22 검색 통계
+GET {{baseUrl}}/search/statistics
+Authorization: Bearer {{accessToken}}
+
+### 7.23 검색 히스토리
+GET {{baseUrl}}/search/history?page=1&size=20
+Authorization: Bearer {{accessToken}}

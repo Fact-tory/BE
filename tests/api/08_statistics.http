@@ -1,0 +1,69 @@
+### 📊 8. 통계 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+### 8.1 전체 뉴스 통계
+GET {{baseUrl}}/news/statistics
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+### 8.2 카테고리별 통계
+GET {{baseUrl}}/news/statistics/categories
+
+### 8.3 언론사별 통계
+GET {{baseUrl}}/statistics/media-outlets
+
+### 8.4 기자별 통계
+GET {{baseUrl}}/statistics/journalists
+
+### 8.5 편향성 분석 통계
+GET {{baseUrl}}/statistics/bias-analysis
+
+### 8.6 일별 뉴스 수집 통계
+GET {{baseUrl}}/statistics/daily-collection?days=7
+
+### 8.7 주간 뉴스 수집 통계
+GET {{baseUrl}}/statistics/daily-collection?days=30
+
+### 8.8 월간 뉴스 수집 통계
+GET {{baseUrl}}/statistics/daily-collection?days=90
+
+### 8.9 크롤링 성능 통계
+GET {{baseUrl}}/statistics/crawling-performance
+
+### 8.10 검색 통계
+GET {{baseUrl}}/statistics/search-trends
+
+### 8.11 사용자 활동 통계 (인증 필요)
+GET {{baseUrl}}/statistics/user-activity
+Authorization: Bearer {{accessToken}}
+
+### 8.12 시간대별 트래픽 통계
+GET {{baseUrl}}/statistics/traffic-by-hour
+
+### 8.13 카테고리별 인기도 통계
+GET {{baseUrl}}/statistics/category-popularity
+
+### 8.14 언론사별 편향성 통계
+GET {{baseUrl}}/statistics/media-bias
+
+### 8.15 키워드 트렌드 통계
+GET {{baseUrl}}/statistics/keyword-trends?period=7d
+
+### 8.16 월별 키워드 트렌드
+GET {{baseUrl}}/statistics/keyword-trends?period=30d
+
+### 8.17 분석 요청 통계
+GET {{baseUrl}}/statistics/analysis-requests
+
+### 8.18 시스템 성능 지표
+GET {{baseUrl}}/statistics/system-performance
+
+### 8.19 API 사용량 통계
+GET {{baseUrl}}/statistics/api-usage
+Authorization: Bearer {{accessToken}}
+
+### 8.20 에러율 통계
+GET {{baseUrl}}/statistics/error-rates
