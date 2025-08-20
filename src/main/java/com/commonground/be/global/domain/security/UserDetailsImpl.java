@@ -39,7 +39,8 @@ public class UserDetailsImpl implements UserDetails {
 
 	@Override
 	public String getUsername() {
-		return user.getUsername();
+		// 이메일 기반 인증을 위해 username 대신 email 반환
+		return user.getEmail() != null ? user.getEmail() : user.getUsername();
 	}
 
 	@Override
@@ -74,5 +75,19 @@ public class UserDetailsImpl implements UserDetails {
 	 */
 	public String getRole() {
 		return user.getUserRole().name();
+	}
+
+	/**
+	 * 사용자 이메일 반환 (명시적)
+	 */
+	public String getEmail() {
+		return user.getEmail();
+	}
+
+	/**
+	 * 사용자 실제 이름 반환 (username 필드)
+	 */
+	public String getRealUsername() {
+		return user.getUsername();
 	}
 }

@@ -58,4 +58,22 @@ public abstract class SoftDeleteTimeStamp {
 	public boolean isRecentlyUpdated(int days) {
 		return getDaysSinceUpdated() <= days;
 	}
+
+	// 테스트용 편의 메서드들
+	public void initializeTimestamps() {
+		if (this.createdAt == null) {
+			this.createdAt = LocalDateTime.now();
+		}
+		if (this.updatedAt == null) {
+			this.updatedAt = LocalDateTime.now();
+		}
+	}
+	
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
+	
+	public void setUpdatedAt(LocalDateTime updatedAt) {
+		this.updatedAt = updatedAt;
+	}
 }

@@ -1,54 +1,22 @@
-spring:
-  datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-        show_sql: true
-        format_sql: true
-    open-in-view: false
-  data:
-    redis:
-      host: localhost
-      port: 6379
-  security:
-    user:
-      name: test
-      password: test
+# ===================================================================
+# 서버 기본 설정
+# ===================================================================
+server:
+  port: 8080
 
-# JWT 설정
-jwt-secret-key: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdGVzdGluZy0xMjM0NTY3ODkw
+# ===================================================================
+# JWT 토큰 보안 설정
+# ===================================================================
+jwt-secret-key: test-jwt-secret-key-for-test-purposes-only-12345678901234567890
 jwt:
   access-token:
-    expiration: 1800  # 30분
+    expiration: 3600
   refresh-token:
-    expiration: 86400  # 24시간
+    expiration: 1209600
 
-# 소셜 로그인 테스트 설정
-google:
-  auth:
-    url: https://accounts.google.com
-    client-id: test-google-client-id
-    client-secret: test-google-client-secret
-    redirect-uri: http://localhost:8080/auth/google/callback
-  api:
-    url: https://www.googleapis.com
-
-kakao:
-  auth:
-    url: https://kauth.kakao.com
-    client-id: test-kakao-client-id
-    redirect-uri: http://localhost:8080/auth/kakao/callback
-  api:
-    url: https://kapi.kakao.com
-
-# 관리자 토큰 설정
+# ===================================================================
+# 관리자 시스템 설정
+# ===================================================================
 admin:
   master-token: test-admin-master-token
   token:
@@ -57,12 +25,51 @@ admin:
     expiration: 3600
     max-concurrent: 1
 
-# 암호화 설정
+# ===================================================================
+# 개인정보 암호화 설정
+# ===================================================================
 encryption:
   field:
-    secret-key: test-encryption-secret-key-32-chars
+    secret-key: test-encryption-secret-key-for-test-purposes
 
-# Redis 캐시 설정
+# ===================================================================
+# 네이버 뉴스 API 설정
+# ===================================================================
+naver:
+  api:
+    client-id: test-naver-client-id
+    client-secret: test-naver-client-secret
+    daily-limit: 25000
+
+# ===================================================================
+# OpenSearch 검색 엔진 설정
+# ===================================================================
+opensearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  username: test
+  password: test
+  connection:
+    timeout: 5000
+    socket-timeout: 30000
+    max-connections: 50
+    max-connections-per-route: 10
+  indexing:
+    batch-size: 100
+    flush-interval: 30s
+    refresh-interval: 30s
+  search:
+    default-size: 10
+    max-size: 100
+    timeout: 10s
+  monitoring:
+    enabled: false
+    slow-query-threshold: 1000ms
+
+# ===================================================================
+# Redis 캐시 만료시간 설정
+# ===================================================================
 redis:
   expiration:
     refresh-token: 1209600
@@ -70,14 +77,140 @@ redis:
     user-session: 3600
     verification-code: 300
 
-# 서버 설정
-server:
-  port: 8080
+# ===================================================================
+# 애플리케이션 동작 관련 설정
+# ===================================================================
+app:
+  # 프론트엔드 연동 설정
+  frontend:
+    url: http://localhost:3000
+    success-redirect: http://localhost:3000/auth/success
+    failure-redirect: http://localhost:3000/auth/error
+  # 스케줄러 및 배치 작업 비활성화 (테스트 환경)
+  scheduler:
+    enabled: false
+  batch:
+    naver-crawling:
+      enabled: false
+      max-articles-per-office: 30
+      crawling-interval-seconds: 2
+      retry-attempts: 3
+      timeout-minutes: 5
 
-# 로깅 설정
+# ===================================================================
+# Spring Boot 핵심 설정
+# ===================================================================
+spring:
+  # 테스트용 H2 인메모리 데이터베이스
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+
+  # 데이터 소스 설정 (Redis, MongoDB)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+      repositories:
+        enabled: false
+    mongodb:
+      uri: mongodb://localhost:27017/test_commonground
+      repositories:
+        enabled: false  # 테스트에서는 비활성화
+
+  # RabbitMQ 비활성화 (테스트 환경)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: test
+    password: test
+    virtual-host: /
+    connection-timeout: 30s
+    requested-heartbeat: 30s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        retry:
+          enabled: false
+
+  # JPA & Hibernate 설정
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        jdbc.batch_size: 20
+        order_inserts: true
+        order_updates: true
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+
+  # OAuth2 Client 설정
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            scope: [ email, profile ]
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          kakao:
+            client-id: test-kakao-client-id
+            client-secret: test-kakao-client-secret
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: [ profile_nickname, account_email ]
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  # 기타 Spring 설정
+  sql:
+    init:
+      encoding: UTF-8
+  thymeleaf:
+    check-template-location: false
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false
+
+# ===================================================================
+# 로깅 레벨 설정
+# ===================================================================
 logging:
   level:
+    # 라이브러리 로그 레벨
+    org.springframework.data.repository.config: ERROR
+    org.springframework.data.repository.support: ERROR
+    org.hibernate: WARN
+    org.hibernate.jpa.internal.util.LogHelper: ERROR
+    org.hibernate.Version: ERROR
+    org.hibernate.orm.connections.pooling: ERROR
+    org.hibernate.engine.transaction.jta.platform: ERROR
+    io.netty.resolver.dns: ERROR
+    org.mongodb.driver: ERROR
+    com.zaxxer.hikari: WARN
+    org.opensearch: ERROR
+    # 애플리케이션 로그 레벨
     com.commonground.be: DEBUG
-    org.springframework.security: WARN
-    org.springframework.web: WARN
-    org.hibernate.SQL: WARN
+    root: INFO

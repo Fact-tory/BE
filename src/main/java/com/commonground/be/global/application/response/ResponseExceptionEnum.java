@@ -64,6 +64,43 @@ public enum ResponseExceptionEnum {
 	NAVER_SCROLLING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "네이버 페이지 스크롤에 실패했습니다."),
 	NAVER_CATEGORY_MAPPING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "네이버 카테고리 매핑에 실패했습니다."),
 	
+	// Analysis 관련 예외
+	ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "분석을 찾을 수 없습니다."),
+	ANALYSIS_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 분석 한도를 초과했습니다."),
+	ANALYSIS_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "이미 완료된 분석입니다."),
+	ANALYSIS_CANNOT_RESTART(HttpStatus.BAD_REQUEST, "재시작할 수 없는 분석입니다."),
+	ANALYSIS_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 분석 요청입니다."),
+	ANALYSIS_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "분석 실행에 실패했습니다."),
+	BIAS_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "편향성 분석에 실패했습니다."),
+	SENTIMENT_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "감정 분석에 실패했습니다."),
+	KEYWORD_EXTRACTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "키워드 추출에 실패했습니다."),
+	
+	// Dashboard 관련 예외
+	DASHBOARD_DATA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "대시보드 데이터를 불러올 수 없습니다."),
+	DASHBOARD_INVALID_PARAMS(HttpStatus.BAD_REQUEST, "대시보드 조회 파라미터가 올바르지 않습니다."),
+	DASHBOARD_USER_DATA_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 대시보드 데이터 조회에 실패했습니다."),
+	DASHBOARD_MAIN_DATA_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메인 대시보드 데이터 조회에 실패했습니다."),
+	
+	// Search 관련 예외
+	SEARCH_QUERY_INVALID(HttpStatus.BAD_REQUEST, "검색 쿼리가 올바르지 않습니다."),
+	SEARCH_ENGINE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "검색 엔진에 연결할 수 없습니다."),
+	SEARCH_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "검색 실행에 실패했습니다."),
+	SEARCH_INDEX_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "검색 인덱싱에 실패했습니다."),
+	AUTOCOMPLETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "자동완성 조회에 실패했습니다."),
+	SEARCH_HISTORY_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "검색 히스토리 조회에 실패했습니다."),
+	SEARCH_HISTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "검색 히스토리를 찾을 수 없습니다."),
+	SEARCH_HISTORY_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "검색 히스토리 삭제에 실패했습니다."),
+	SEARCH_HISTORY_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "검색 히스토리 저장에 실패했습니다."),
+	
+	// 일반적인 파라미터 검증 예외
+	INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "잘못된 파라미터입니다."),
+	PARAMETER_REQUIRED(HttpStatus.BAD_REQUEST, "필수 파라미터가 누락되었습니다."),
+	PARAMETER_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "파라미터가 허용 범위를 벗어났습니다."),
+	
+	// 동시성 관련 예외
+	CONCURRENCY_CONFLICT(HttpStatus.CONFLICT, "동시 요청 처리 중입니다. 잠시 후 다시 시도해주세요."),
+	RESOURCE_LOCKED(HttpStatus.LOCKED, "리소스가 잠금 상태입니다. 다른 작업이 완료될 때까지 기다려주세요."),
+	
 	;
 
 	private final HttpStatus httpStatus;

@@ -1,0 +1,88 @@
+### 🔄 배치 작업 제어 API 테스트
+### 관리자 권한이 필요한 API들입니다.
+
+# 사전 조건: 01_auth.http에서 관리자 토큰을 먼저 획득해야 합니다.
+@baseUrl = http://localhost:8080/api/v1
+@adminToken = {{access_token}}
+
+### 1. 배치 작업 상태 조회
+GET {{baseUrl}}/batch/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 2. 배치 스케줄 설정 조회  
+GET {{baseUrl}}/batch/schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 3. 배치 설정 정보 조회 (언론사 목록)
+GET {{baseUrl}}/batch/config
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 4. 네이버 뉴스 크롤링 배치 수동 실행 (기본)
+POST {{baseUrl}}/batch/naver/crawling/start
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 5. 네이버 뉴스 크롤링 배치 수동 실행 (속보 타입)
+POST {{baseUrl}}/batch/naver/crawling/start?type=breaking
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 6. 네이버 뉴스 크롤링 배치 수동 실행 (주간 종합 타입)
+POST {{baseUrl}}/batch/naver/crawling/start?type=weekly
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+
+### 📅 배치 스케줄 정보
+###
+### 정기 크롤링: 매 2시간마다 (6, 8, 10, 12, 14, 16, 18, 20, 22시)
+### - cron: "0 0 6,8,10,12,14,16,18,20,22 * * *"
+###
+### 속보 크롤링: 매 30분마다 (7-23시)  
+### - cron: "0 */30 7-23 * * *"
+###
+### 새벽 크롤링: 매일 새벽 3시
+### - cron: "0 0 3 * * *"
+###
+### 주간 종합: 매주 일요일 오전 1시
+### - cron: "0 0 1 * * SUN"
+###
+
+### 📰 크롤링 대상 언론사 (27개 설정)
+###
+### 주요 일간지:
+### - 경향신문(032), 동아일보(020), 조선일보(023), 중앙일보(025)
+### - 한겨레(028), 한국일보(469), 국민일보(005), 문화일보(021), 세계일보(022)
+###
+### 경제 전문지:
+### - 매일경제(009), 머니투데이(008), 조선비즈(366)
+###
+### 방송사:
+### - SBS(055), KBS(056), MBC(057), YTN(448), 뉴스1(421)
+###
+### 카테고리별 수집량:
+### - 정치(100): 12개 언론사, 각 30개 기사
+### - 경제(101): 7개 언론사, 각 25개 기사
+### - 사회(102): 5개 언론사, 각 20개 기사
+###
+
+### ⚠️ 주의사항
+### 1. 관리자(ADMIN) 또는 매니저(MANAGER) 권한이 필요합니다.
+### 2. 배치 실행은 비동기로 처리되며, 즉시 응답이 반환됩니다.
+### 3. 실제 크롤링 진행상황은 WebSocket 또는 로그로 확인할 수 있습니다.
+### 4. 크롤링 간격은 2초로 설정되어 서버 부하를 방지합니다.
+### 5. 스케줄러는 application.yml의 app.scheduler.enabled로 제어할 수 있습니다.

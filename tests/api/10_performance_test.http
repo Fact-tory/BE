@@ -1,0 +1,119 @@
+### 🚀 10. 성능 및 스트레스 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+@adminToken = ADMIN_MASTER_TOKEN=6dFou5GQmxpcxmmWXgEzyBtdouijeqAUJowj00oJMl81HfFEQsgp22YObVlEe1pg
+
+### 10.1 대용량 뉴스 조회 (최대 50개)
+GET {{baseUrl}}/news/recent?limit=50
+
+### 10.2 복잡한 검색 쿼리
+GET {{baseUrl}}/search/news?q=정치%20경제%20사회%20문화&category=ALL&bias=all&sort=relevance&page=1&size=50
+
+### 10.3 대용량 크롤링 요청 (Heavy)
+POST {{baseUrl}}/news/crawl/naver
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 100,
+  "maxScrollAttempts": 30,
+  "sessionId": "stress_test_001"
+}
+
+### 10.4 동시 크롤링 요청 1
+POST {{baseUrl}}/news/crawl/naver
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "officeId": "020",
+  "categoryId": "101",
+  "maxArticles": 50,
+  "sessionId": "concurrent_test_001"
+}
+
+### 10.5 동시 크롤링 요청 2
+POST {{baseUrl}}/news/crawl/naver
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "officeId": "025",
+  "categoryId": "102",
+  "maxArticles": 50,
+  "sessionId": "concurrent_test_002"
+}
+
+### 10.6 동시 크롤링 요청 3
+POST {{baseUrl}}/news/crawl/naver
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "officeId": "032",
+  "categoryId": "103",
+  "maxArticles": 50,
+  "sessionId": "concurrent_test_003"
+}
+
+### 10.7 대용량 분석 요청
+POST {{baseUrl}}/analysis/start
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "text": "매우 긴 텍스트 분석 요청입니다. 이것은 성능 테스트를 위한 긴 텍스트입니다. 정치, 경제, 사회, 문화 등 다양한 주제를 다루고 있으며, 편향성 분석과 감정 분석을 모두 포함합니다. 이러한 복잡한 분석 요청이 시스템에 어떤 부하를 주는지 테스트하기 위한 목적입니다.",
+  "title": "대용량 텍스트 분석 테스트",
+  "type": "text_analysis",
+  "options": {
+    "include_bias_analysis": true,
+    "include_sentiment_analysis": true,
+    "include_keyword_extraction": true,
+    "include_fact_check": true
+  }
+}
+
+### 10.8 연속 검색 요청 1
+GET {{baseUrl}}/search/news?q=정치&page=1&size=20
+
+### 10.9 연속 검색 요청 2
+GET {{baseUrl}}/search/news?q=경제&page=1&size=20
+
+### 10.10 연속 검색 요청 3
+GET {{baseUrl}}/search/news?q=사회&page=1&size=20
+
+### 10.11 연속 검색 요청 4
+GET {{baseUrl}}/search/news?q=문화&page=1&size=20
+
+### 10.12 연속 검색 요청 5
+GET {{baseUrl}}/search/news?q=스포츠&page=1&size=20
+
+### 10.13 대용량 통계 조회
+GET {{baseUrl}}/statistics/daily-collection?days=365
+
+### 10.14 복잡한 통계 조회
+GET {{baseUrl}}/statistics/bias-analysis
+
+### 10.15 시스템 리소스 확인
+GET {{baseUrl}}/admin/system/resources
+Authorization: Bearer {{adminToken}}
+
+### 10.16 캐시 성능 테스트 (동일 요청 반복)
+GET {{baseUrl}}/news/trending?limit=10
+
+### 10.17 캐시 성능 테스트 (동일 요청 반복)
+GET {{baseUrl}}/news/trending?limit=10
+
+### 10.18 캐시 성능 테스트 (동일 요청 반복)
+GET {{baseUrl}}/news/trending?limit=10
+
+### 10.19 데이터베이스 부하 테스트
+GET {{baseUrl}}/news/categories/GENERAL?page=1&limit=50
+
+### 10.20 메모리 사용량 확인
+GET {{baseUrl}}/admin/system/memory
+Authorization: Bearer {{adminToken}}

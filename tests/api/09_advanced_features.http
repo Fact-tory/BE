@@ -1,0 +1,134 @@
+### ⚡ 9. 고급 기능 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+@adminToken = ADMIN_MASTER_TOKEN=6dFou5GQmxpcxmmWXgEzyBtdouijeqAUJowj00oJMl81HfFEQsgp22YObVlEe1pg
+
+### 9.1 북마크 추가
+POST {{baseUrl}}/bookmarks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "newsId": "507f1f77bcf86cd799439011",
+  "folderName": "정치뉴스"
+}
+
+### 9.2 북마크 목록 조회
+GET {{baseUrl}}/bookmarks?page=1&size=20
+Authorization: Bearer {{accessToken}}
+
+### 9.3 북마크 삭제
+DELETE {{baseUrl}}/bookmarks/507f1f77bcf86cd799439011
+Authorization: Bearer {{accessToken}}
+
+### 9.4 관심 키워드 등록
+POST {{baseUrl}}/keywords/interest
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "keywords": ["정치", "경제정책", "부동산"],
+  "notificationEnabled": true
+}
+
+### 9.5 관심 키워드 목록
+GET {{baseUrl}}/keywords/interest
+Authorization: Bearer {{accessToken}}
+
+### 9.6 관심 키워드 삭제
+DELETE {{baseUrl}}/keywords/interest
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "keywords": ["부동산"]
+}
+
+### 9.7 알림 설정 조회
+GET {{baseUrl}}/notifications/settings
+Authorization: Bearer {{accessToken}}
+
+### 9.8 알림 설정 업데이트
+PUT {{baseUrl}}/notifications/settings
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "emailNotification": true,
+  "pushNotification": false,
+  "keywordAlert": true,
+  "analysisComplete": true
+}
+
+### 9.9 알림 목록 조회
+GET {{baseUrl}}/notifications?page=1&size=20
+Authorization: Bearer {{accessToken}}
+
+### 9.10 알림 읽음 처리
+PUT {{baseUrl}}/notifications/550e8400-e29b-41d4-a716-446655440000/read
+Authorization: Bearer {{accessToken}}
+
+### 9.11 댓글 작성
+POST {{baseUrl}}/news/507f1f77bcf86cd799439011/comments
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "이 기사에 대한 의견입니다.",
+  "parentCommentId": null
+}
+
+### 9.12 댓글 조회
+GET {{baseUrl}}/news/507f1f77bcf86cd799439011/comments?page=1&size=20
+
+### 9.13 댓글 수정
+PUT {{baseUrl}}/comments/comment_id_12345
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "수정된 댓글 내용입니다."
+}
+
+### 9.14 댓글 삭제
+DELETE {{baseUrl}}/comments/comment_id_12345
+Authorization: Bearer {{accessToken}}
+
+### 9.15 뉴스 공유
+POST {{baseUrl}}/news/507f1f77bcf86cd799439011/share
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "platform": "twitter",
+  "message": "흥미로운 기사입니다."
+}
+
+### 9.16 사용자 피드백 제출
+POST {{baseUrl}}/feedback
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "feature_request",
+  "title": "새로운 기능 요청",
+  "content": "이런 기능이 있으면 좋겠습니다.",
+  "priority": "medium"
+}
+
+### 9.17 사용자 활동 로그
+GET {{baseUrl}}/users/me/activity?page=1&size=20
+Authorization: Bearer {{accessToken}}
+
+### 9.18 추천 뉴스
+GET {{baseUrl}}/recommendations/news?limit=10
+Authorization: Bearer {{accessToken}}
+
+### 9.19 유사 기사 찾기
+GET {{baseUrl}}/news/507f1f77bcf86cd799439011/similar?limit=5
+
+### 9.20 시스템 상태 확인 (관리자)
+GET {{baseUrl}}/admin/system/status
+Authorization: Bearer {{adminToken}}

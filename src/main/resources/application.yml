@@ -1,235 +1,219 @@
-# =================================
+# ===================================================================
 # 서버 기본 설정
-# =================================
+# ===================================================================
 server:
-  port: ${SERVER_PORT}  # 애플리케이션이 실행될 포트 번호
+  port: ${SERVER_PORT}
 
-# =================================
+# ===================================================================
 # JWT 토큰 보안 설정
-# =================================
-jwt-secret-key: ${JWT_SECRET_KEY}  # JWT 토큰 서명/검증용 비밀키 (Base64 인코딩)
-
+# ===================================================================
+jwt-secret-key: ${JWT_SECRET_KEY}
 jwt:
   access-token:
-    expiration: 3600  # Access Token 만료시간 (1시간) - 짧게 설정하여 보안성 강화
+    expiration: 3600
   refresh-token:
-    expiration: 1209600  # Refresh Token 만료시간 (14일) - 장기간 로그인 유지용
+    expiration: 1209600
 
-# =================================
+# ===================================================================
 # 관리자 시스템 설정
-# =================================
+# ===================================================================
 admin:
-  master-token: ${ADMIN_MASTER_TOKEN}  # 관리자 인증용 마스터 토큰 (모든 API 접근 가능)
+  master-token: ${ADMIN_MASTER_TOKEN}
   token:
-    identifier: ${ADMIN_TOKEN_IDENTIFIER}  # 관리자 토큰을 식별하는 고유 문자열
+    identifier: ${ADMIN_TOKEN_IDENTIFIER}
   session:
-    expiration: 3600  # 관리자 세션 만료시간 (1시간) - 보안상 짧게 설정
-    max-concurrent: 1  # 관리자 동시 세션 제한 (중복 로그인 방지)
+    expiration: 3600
+    max-concurrent: 1
 
-# =================================
+# ===================================================================
 # 개인정보 암호화 설정
-# =================================
+# ===================================================================
 encryption:
   field:
-    secret-key: ${ENCRYPTION_SECRET_KEY}  # 이메일 등 민감정보 DB 저장시 암호화용 키
+    secret-key: ${ENCRYPTION_SECRET_KEY}
 
-# =================================
-# 소셜 로그인 OAuth2 설정
-# =================================
-google:
-  auth:
-    url: https://accounts.google.com  # Google OAuth2 인증 서버 URL
-    client-id: ${GOOGLE_CLIENT_ID}  # Google Cloud Console에서 발급받은 클라이언트 ID
-    client-secret: ${GOOGLE_CLIENT_SECRET}  # Google OAuth2 클라이언트 시크릿
-    redirect-uri: ${GOOGLE_REDIRECT_URI}  # 인증 완료 후 리다이렉트될 프론트엔드 URL
-  api:
-    url: https://www.googleapis.com  # Google API 서버 URL (사용자 정보 조회용)
-
-kakao:
-  auth:
-    url: https://kauth.kakao.com  # 카카오 OAuth2 인증 서버 URL
-    client-id: ${KAKAO_CLIENT_ID}  # 카카오 개발자센터에서 발급받은 REST API 키
-    redirect-uri: ${KAKAO_REDIRECT_URI}  # 인증 완료 후 리다이렉트될 프론트엔드 URL
-  api:
-    url: https://kapi.kakao.com  # 카카오 API 서버 URL (사용자 정보 조회용)
-
-# =================================
+# ===================================================================
 # 네이버 뉴스 API 설정
-# =================================
+# ===================================================================
 naver:
   api:
-    client-id: ${NAVER_API_CLIENT_ID}  # 네이버 개발자 센터에서 발급받은 클라이언트 ID
-    client-secret: ${NAVER_API_CLIENT_SECRET}  # 네이버 API 클라이언트 시크릿
-    daily-limit: 25000  # 일일 API 호출 제한 (네이버 뉴스 검색 API 기본 제한)
+    client-id: ${NAVER_API_CLIENT_ID}
+    client-secret: ${NAVER_API_CLIENT_SECRET}
+    daily-limit: 25000
 
-# =================================
+# ===================================================================
 # OpenSearch 검색 엔진 설정
-# =================================
+# ===================================================================
 opensearch:
-  host: ${OPENSEARCH_HOST}  # OpenSearch 서버 주소
-  port: ${OPENSEARCH_PORT}  # OpenSearch 서버 포트
-  scheme: ${OPENSEARCH_SCHEME}  # 프로토콜 (http/https)
-  username: ${OPENSEARCH_USERNAME}  # OpenSearch 사용자명
-  password: ${OPENSEARCH_PASSWORD}  # OpenSearch 비밀번호
-  
-  # 성능 및 모니터링 설정
+  host: ${OPENSEARCH_HOST}
+  port: ${OPENSEARCH_PORT}
+  scheme: ${OPENSEARCH_SCHEME}
+  username: ${OPENSEARCH_USERNAME}
+  password: ${OPENSEARCH_PASSWORD}
   connection:
-    timeout: 5000  # 연결 타임아웃 (5초)
-    socket-timeout: 30000  # 소켓 타임아웃 (30초)
-    max-connections: 50  # 최대 연결 수
-    max-connections-per-route: 10  # 라우트당 최대 연결 수
-  
-  # 인덱싱 성능 설정  
+    timeout: 5000
+    socket-timeout: 30000
+    max-connections: 50
+    max-connections-per-route: 10
   indexing:
-    batch-size: 100  # 배치 인덱싱 크기
-    flush-interval: 30s  # 플러시 간격
-    refresh-interval: 30s  # 리프레시 간격 (검색 가능한 시점)
-    
-  # 검색 성능 설정
+    batch-size: 100
+    flush-interval: 30s
+    refresh-interval: 30s
   search:
-    default-size: 10  # 기본 검색 결과 크기
-    max-size: 100  # 최대 검색 결과 크기
-    timeout: 10s  # 검색 타임아웃
-    
-  # 모니터링 설정
+    default-size: 10
+    max-size: 100
+    timeout: 10s
   monitoring:
-    enabled: true  # 성능 모니터링 활성화
-    slow-query-threshold: 1000ms  # 느린 쿼리 임계값 (1초)
-    log-level: INFO  # 로그 레벨
+    enabled: true
+    slow-query-threshold: 1000ms
 
-# =================================
+# ===================================================================
 # Redis 캐시 만료시간 설정
-# =================================
+# ===================================================================
 redis:
   expiration:
-    refresh-token: 1209600  # Refresh Token Redis 저장 만료시간 (14일)
-    kakao-tid: 180  # 카카오 결제 TID 저장 만료시간 (3시간) - 결제 시스템용
-    user-session: 3600  # 사용자 세션 Redis 저장 만료시간 (1시간)
-    verification-code: 300  # 인증코드 Redis 저장 만료시간 (5분) - 이메일/SMS 인증용
+    refresh-token: 1209600
+    kakao-tid: 180
+    user-session: 3600
+    verification-code: 300
 
+# ===================================================================
+# 애플리케이션 동작 관련 설정
+# ===================================================================
+app:
+  # 프론트엔드 연동 설정
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+    success-redirect: ${FRONTEND_URL:http://localhost:3000}/auth/success
+    failure-redirect: ${FRONTEND_URL:http://localhost:3000}/auth/error
+  # 스케줄러 및 배치 작업 커스텀 설정 (개발 환경에서는 비활성화)
+  scheduler:
+    enabled: false
+  batch:
+    naver-crawling:
+      enabled: true
+      max-articles-per-office: 30
+      crawling-interval-seconds: 2
+      retry-attempts: 3
+      timeout-minutes: 5
 
-# =================================
+# ===================================================================
 # Spring Boot 핵심 설정
-# =================================
+# ===================================================================
 spring:
   # 데이터베이스 연결 설정
   datasource:
     url: jdbc:mysql://${DB_URL}/factory
-    username: ${DB_USER}  # MySQL 사용자명
-    password: ${DB_PASSWORD}  # MySQL 비밀번호
-    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0+ 드라이버
-    # HikariCP 커넥션 풀 설정 (성능 최적화)
-#    hikari:
-#      maximum-pool-size: 20  # 최대 커넥션 수 (동시 접속자 수 고려)
-#      minimum-idle: 5  # 최소 유지 커넥션 수 (빠른 응답을 위해)
-#      connection-timeout: 30000  # 커넥션 획득 대기시간 (30초)
-#      idle-timeout: 600000  # 유휴 커넥션 제거 시간 (10분)
-#      max-lifetime: 1800000  # 커넥션 최대 생존시간 (30분)
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # Redis 캐시 서버 연결 설정
+  # 데이터 소스 설정 (Redis, MongoDB)
   data:
     redis:
-      host: ${REDIS_HOSTt}  # Redis 서버 주소
-      port: ${REDIS_PORT}  # Redis 서버 포트 (기본: 6379)
-      timeout: 3000ms  # Redis 응답 대기시간 (3초)
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      timeout: 3000ms
       repositories:
-        enabled: false  # Spring Data Redis Repository 비활성화 (직접 제어)
-    
-    # MongoDB 데이터베이스 연결 설정
+        enabled: false
     mongodb:
-      uri: ${MONGODB_URI}  # MongoDB 연결 URI
+      uri: ${MONGODB_URI}
       repositories:
-        enabled: true  # Spring Data MongoDB Repository 활성화
+        enabled: true
 
   # RabbitMQ 메시지 큐 연결 설정
   rabbitmq:
-    host: ${RABBITMQ_HOST}  # RabbitMQ 서버 주소
-    port: ${RABBITMQ_PORT}  # RabbitMQ 서버 포트
-    username: ${RABBITMQ_USERNAME}  # RabbitMQ 사용자명
-    password: ${RABBITMQ_PASSWORD}  # RabbitMQ 비밀번호
-    virtual-host: ${RABBITMQ_VHOST}  # 가상 호스트
-    
-    # 연결 설정
-    connection-timeout: 30s  # 연결 타임아웃 (30초)
-    requested-heartbeat: 30s  # 하트비트 간격 (30초)
-    
-    # Publisher 설정
-    publisher-confirm-type: correlated  # Publisher Confirms 활성화
-    publisher-returns: true  # 라우팅 실패시 메시지 반환 활성화
-    
-    # Consumer 설정
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST}
+    connection-timeout: 30s
+    requested-heartbeat: 30s
+    publisher-confirm-type: correlated
+    publisher-returns: true
     listener:
       simple:
-        acknowledge-mode: manual  # 수동 ACK 모드
-        prefetch: 1  # 동시 처리 메시지 수 제한
+        acknowledge-mode: manual
+        prefetch: 1
         retry:
-          enabled: true  # 재시도 활성화
-          max-attempts: 3  # 최대 재시도 횟수
-          initial-interval: 1000  # 초기 재시도 간격 (밀리초)
-          max-interval: 10000  # 최대 재시도 간격 (밀리초)
-          multiplier: 2.0  # 재시도 간격 증가 배수
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          max-interval: 10000
+          multiplier: 2.0
 
-  # JPA/Hibernate ORM 설정
+  # JPA & Hibernate 설정
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update  # 엔티티 변경시 테이블 구조 자동 업데이트 (개발용)
+      ddl-auto: update
     properties:
       hibernate:
-        format_sql: true  # SQL 로그 포맷팅 (가독성 향상)
-        use_sql_comments: true  # SQL에 주석 추가 (디버깅용)
-        jdbc:
-          batch_size: 20  # 배치 INSERT/UPDATE 크기 (성능 최적화)
-        order_inserts: true  # INSERT 문 정렬 (배치 효율성 증대)
-        order_updates: true  # UPDATE 문 정렬 (배치 효율성 증대)
-        connection:
-          CharSet: utf8mb4  # 이모지 지원 문자셋
-          characterEncoding: utf-8  # 한글 인코딩
-          useUnicode: true  # 유니코드 사용
-    open-in-view: false  # OSIV 비활성화 (N+1 문제 방지, 성능 최적화)
+        format_sql: true
+        use_sql_comments: true
+        jdbc.batch_size: 20
+        order_inserts: true
+        order_updates: true
+        connection.CharSet: utf8mb4
+        connection.characterEncoding: utf-8
+        connection.useUnicode: true
 
-  # SQL 스크립트 초기화 설정
+  # OAuth2 Client 설정 (실제 개발/배포용)
+  # 설정 방법: docs/OAuth2_SETUP_GUIDE.md 참고
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID} # Google Cloud Console에서 발급받은 클라이언트 ID
+            client-secret: ${GOOGLE_CLIENT_SECRET} # Google Cloud Console에서 발급받은 클라이언트 보안 비밀번호
+            scope: [ email, profile ]
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID} # Kakao Developers에서 발급받은 REST API 키
+            client-secret: ${KAKAO_CLIENT_SECRET} # Kakao Developers에서 발급받은 Client Secret (선택)
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: [ profile_nickname, account_email ]
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  # 기타 Spring 설정
   sql:
     init:
-      encoding: UTF-8  # SQL 파일 인코딩
-  
-  # Thymeleaf 템플릿 설정 (API 서버이므로 템플릿 체크 비활성화)
+      encoding: UTF-8
   thymeleaf:
     check-template-location: false
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false
 
-# =================================
-# 로깅 레벨 설정 (불필요한 로그 제거)
-# =================================
+# ===================================================================
+# 로깅 레벨 설정
+# ===================================================================
 logging:
   level:
-    # Spring Data Repository 설정 경고 제거
+    # 라이브러리 로그 레벨
     org.springframework.data.repository.config: ERROR
     org.springframework.data.repository.support: ERROR
-    
-    # Hibernate 상세 로그 제거
     org.hibernate: WARN
     org.hibernate.jpa.internal.util.LogHelper: ERROR
     org.hibernate.Version: ERROR
     org.hibernate.orm.connections.pooling: ERROR
     org.hibernate.engine.transaction.jta.platform: ERROR
-    
-    # Netty DNS 경고 제거
     io.netty.resolver.dns: ERROR
-    
-    # MongoDB Driver 연결 로그 최소화
     org.mongodb.driver: WARN
-    org.mongodb.driver.client: WARN
-    org.mongodb.driver.cluster: WARN
-    org.mongodb.driver.connection: WARN
-    
-    # Spring Data MongoDB 관련 로그 최소화
-    org.springframework.data.mongodb: INFO
-    org.springframework.boot.autoconfigure.mongo: WARN
-    
-    # 기타 불필요한 로그 제거
     com.zaxxer.hikari: WARN
-    
-    # OpenSearch 성능 모니터링 로그 설정
     org.opensearch: INFO
-    org.opensearch.client: INFO
-    org.opensearch.search.query: DEBUG  # 쿼리 성능 분석용
+    # 애플리케이션 로그 레벨
+    org.opensearch.search.query: DEBUG
     com.commonground.be.domain.news.service.OpenSearchIndexingService: DEBUG
