@@ -1,0 +1,102 @@
+### 🔬 6. 뉴스 분석 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+@analysisId = 550e8400-e29b-41d4-a716-446655440000
+
+### 6.1 뉴스 분석 시작 (URL 기반)
+POST {{baseUrl}}/analysis/start
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "url": "https://news.naver.com/main/read.naver?mode=LSD&mid=sec&sid1=100&oid=001&aid=0014123456",
+  "type": "url_analysis",
+  "options": {
+    "include_bias_analysis": true,
+    "include_sentiment_analysis": true,
+    "include_keyword_extraction": true
+  }
+}
+
+### 6.2 뉴스 분석 시작 (텍스트 기반)
+POST {{baseUrl}}/analysis/start
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "text": "정부가 오늘 새로운 경제정책을 발표했다. 이번 정책은 중소기업 지원과 일자리 창출에 중점을 둔다고 발표했다.",
+  "title": "정부 경제정책 발표",
+  "type": "text_analysis",
+  "options": {
+    "include_bias_analysis": true,
+    "include_sentiment_analysis": true
+  }
+}
+
+### 6.3 뉴스 분석 시작 (뉴스 ID 기반)
+POST {{baseUrl}}/analysis/start
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "newsId": "507f1f77bcf86cd799439011",
+  "type": "news_analysis",
+  "options": {
+    "include_bias_analysis": true,
+    "include_sentiment_analysis": true,
+    "include_keyword_extraction": true,
+    "include_fact_check": false
+  }
+}
+
+### 6.4 분석 결과 조회 (완료된 분석)
+GET {{baseUrl}}/analysis/result/{{analysisId}}
+Authorization: Bearer {{accessToken}}
+
+### 6.5 분석 결과 조회 (진행 중인 분석)
+GET {{baseUrl}}/analysis/result/550e8400-e29b-41d4-a716-446655440001
+Authorization: Bearer {{accessToken}}
+
+### 6.6 분석 결과 조회 (존재하지 않는 분석 - 404 예상)
+GET {{baseUrl}}/analysis/result/nonexistent-analysis-id
+Authorization: Bearer {{accessToken}}
+
+### 6.7 분석 결과 조회 (권한 없이 - 실패 예상)
+GET {{baseUrl}}/analysis/result/{{analysisId}}
+
+### 6.8 내 분석 목록 (기본)
+GET {{baseUrl}}/analysis/my
+Authorization: Bearer {{accessToken}}
+
+### 6.9 내 분석 목록 (페이징)
+GET {{baseUrl}}/analysis/my?page=2&limit=10
+Authorization: Bearer {{accessToken}}
+
+### 6.10 내 분석 목록 (많은 개수)
+GET {{baseUrl}}/analysis/my?page=1&limit=50
+Authorization: Bearer {{accessToken}}
+
+### 6.11 내 분석 목록 (권한 없이 - 실패 예상)
+GET {{baseUrl}}/analysis/my
+
+### 6.12 분석 상태 조회
+GET {{baseUrl}}/analysis/status/{{analysisId}}
+Authorization: Bearer {{accessToken}}
+
+### 6.13 분석 취소
+DELETE {{baseUrl}}/analysis/{{analysisId}}
+Authorization: Bearer {{accessToken}}
+
+### 6.14 분석 재시작
+POST {{baseUrl}}/analysis/{{analysisId}}/restart
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "options": {
+    "include_bias_analysis": true,
+    "include_sentiment_analysis": true
+  }
+}
