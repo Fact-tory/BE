@@ -47,6 +47,7 @@ public class JwtProvider {
 	@Value("${jwt.refresh-token.expiration}")
 	private Long refreshTokenExpiration;
 
+
 	private Key key;
 
 	/**
@@ -61,6 +62,19 @@ public class JwtProvider {
 	}
 
 	/**
+	 * Access Token 응답 바디용 토큰 정리 (Bearer 접두사 제거)
+	 */
+	public String prepareAccessTokenForResponse(String accessToken) {
+		// Bearer 접두사 제거하여 순수 토큰만 반환
+		String tokenValue = accessToken.startsWith(BEARER_PREFIX)
+				? accessToken.substring(BEARER_PREFIX.length())
+				: accessToken;
+
+		log.info("🔑 Access Token 응답 준비 완료 - 토큰 길이: {}", tokenValue.length());
+		return tokenValue;
+	}
+
+	/**
 	 * Refresh Token을 HttpOnly 쿠키로 설정
 	 */
 	public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
@@ -71,24 +85,48 @@ public class JwtProvider {
 
 		Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, tokenValue);
 		refreshCookie.setHttpOnly(true); // JavaScript 접근 차단
-		refreshCookie.setSecure(true); // HTTPS에서만 전송
-		refreshCookie.setPath("/"); // 모든 경로에서 사용 가능
-		refreshCookie.setMaxAge(refreshTokenExpiration.intValue()); // 만료시간 설정
 
-		response.addCookie(refreshCookie);
-		log.info("Refresh Token 쿠키 설정 완료");
+		// 개발 환경에서는 HTTP도 허용, 운영 환경에서는 HTTPS만 허용
+		boolean isSecure = false; // 개발 환경용
+		refreshCookie.setSecure(isSecure);
+
+		refreshCookie.setPath("/"); // 모든 경로에서 사용 가능
+		refreshCookie.setMaxAge(refreshTokenExpiration.intValue()); // 만료시간 설정 (초 단위)
+
+		// SameSite 속성 추가 (개발 환경에서는 None으로 설정)
+		response.setHeader("Set-Cookie", String.format(
+				"%s=%s; Path=/; HttpOnly; SameSite=None; Max-Age=%d%s",
+				REFRESH_TOKEN_COOKIE_NAME,
+				tokenValue,
+				refreshTokenExpiration.intValue(),
+				isSecure ? "; Secure" : ""
+		));
+
+		log.info("🍪 Refresh Token 쿠키 설정 완료 - Name: {}, Secure: {}, SameSite: None, 토큰 길이: {}",
+				REFRESH_TOKEN_COOKIE_NAME, isSecure, tokenValue.length());
 	}
 
 	/**
 	 * 요청에서 Refresh Token 쿠키 추출
 	 */
 	public String getRefreshTokenFromCookie(HttpServletRequest request) {
+		log.info("🔍 Refresh Token 쿠키 추출 시작");
 		if (request.getCookies() != null) {
+			log.info("🔍 전체 쿠키 개수: {}", request.getCookies().length);
 			for (Cookie cookie : request.getCookies()) {
+				log.info("🔍 쿠키 확인: {} = {}", cookie.getName(),
+						cookie.getValue().length() > 20 ? cookie.getValue().substring(0, 20) + "..."
+								: cookie.getValue());
 				if (REFRESH_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
+					log.info("✅ Refresh Token 쿠키 발견: {}",
+							cookie.getValue().substring(0, Math.min(20, cookie.getValue().length()))
+									+ "...");
 					return cookie.getValue();
 				}
 			}
+			log.warn("❌ Refresh Token 쿠키({})를 찾을 수 없음", REFRESH_TOKEN_COOKIE_NAME);
+		} else {
+			log.warn("❌ 요청에 쿠키가 없음");
 		}
 		return null;
 	}
@@ -114,24 +152,40 @@ public class JwtProvider {
 	}
 
 	/**
-	 * 세션 ID가 포함된 Access 토큰 생성
+	 * 이메일과 이름이 포함된 Access 토큰 생성
 	 */
-	public String createAccessTokenWithSession(String username, UserRole role, String sessionId) {
+	public String createAccessTokenWithEmailAndName(String username, UserRole role, String email,
+			String name) {
 		Date date = new Date();
 
 		return BEARER_PREFIX + Jwts.builder()
 				.setSubject(username)
 				.claim(AUTHORIZATION_KEY, role)
-				.claim("sessionId", sessionId)
-				.claim("tokenVersion", System.currentTimeMillis()) // 토큰 버전
+				.claim("email", email)
+				.claim("name", name)
 				.setExpiration(new Date(date.getTime() + (accessTokenExpiration * 1000)))
-				.setIssuedAt(date)
+				.setIssuedAt(date) // 발급일
+				.signWith(key, SignatureAlgorithm.HS256)
+				.compact();
+	}
+
+
+	/**
+	 * Refresh 토큰 생성 (OAuth2용 - UserRole 없이)
+	 */
+	public String createRefreshToken(String username) {
+		Date date = new Date();
+
+		return BEARER_PREFIX + Jwts.builder()
+				.setSubject(username)
+				.setExpiration(new Date(date.getTime() + (refreshTokenExpiration * 1000)))
+				.setIssuedAt(date) // 발급일
 				.signWith(key, SignatureAlgorithm.HS256)
 				.compact();
 	}
 
 	/**
-	 * Refresh 토큰 생성
+	 * Refresh 토큰 생성 (기존 호환성)
 	 */
 	public String createRefreshToken(String username, UserRole role) {
 		Date date = new Date();
@@ -145,24 +199,6 @@ public class JwtProvider {
 				.compact();
 	}
 
-	/**
-	 * 세션 ID가 포함된 Refresh 토큰 생성
-	 */
-	public String createRefreshTokenWithSession(String username, UserRole role, String sessionId) {
-		Date date = new Date();
-		String tokenId = java.util.UUID.randomUUID().toString();
-
-		return BEARER_PREFIX + Jwts.builder()
-				.setSubject(username)
-				.claim(AUTHORIZATION_KEY, role)
-				.claim("sessionId", sessionId)
-				.claim("tokenId", tokenId) // 토큰 고유 ID (블랙리스트용)
-				.claim("tokenVersion", System.currentTimeMillis())
-				.setExpiration(new Date(date.getTime() + (refreshTokenExpiration * 1000)))
-				.setIssuedAt(date)
-				.signWith(key, SignatureAlgorithm.HS256)
-				.compact();
-	}
 
 	/**
 	 * 요청 바디에서 액세스 토큰 추출
@@ -271,5 +307,24 @@ public class JwtProvider {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+
+	public Long getRefreshTokenExpiration() {
+		return this.refreshTokenExpiration * 1000; // 초를 밀리초로 변환
+	}
+
+	/**
+	 * Refresh Token 쿠키 제거
+	 */
+	public void clearRefreshTokenCookie(HttpServletResponse response) {
+		Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, null);
+		refreshCookie.setHttpOnly(true);
+		refreshCookie.setSecure(true);
+		refreshCookie.setPath("/");
+		refreshCookie.setMaxAge(0); // 즉시 만료
+
+		response.addCookie(refreshCookie);
+		log.info("Refresh Token 쿠키 삭제 완료");
 	}
 }
