@@ -20,16 +20,17 @@
 
 ## 🎯 Overview
 
-**Factory BE**는 실시간 뉴스 수집, AI 기반 편향성 분석, 그리고 고도화된 검색 시스템을 제공하는 차세대 뉴스 분석 플랫폼입니다. 머신러닝과 자연어 처리 기술을 활용하여 뉴스의 편향성을 객관적으로 분석하고, 사용자에게 균형잡힌 정보를 제공합니다.
+**Factory BE**는 소셜 로그인 기반의 실시간 뉴스 수집, AI 기반 편향성 분석, 그리고 고도화된 OpenSearch 검색 시스템을 제공하는 차세대 뉴스 분석 플랫폼입니다. 정기 배치 크롤링과 머신러닝을 활용하여 뉴스의 편향성을 객관적으로 분석하고, 사용자에게 균형잡힌 정보를 제공합니다.
 
 <details>
 <summary><strong>🔍 핵심 기능 미리보기</strong></summary>
 
+- **🔐 소셜 로그인**: Kakao, Google OAuth 2.0 인증
 - **🤖 AI 편향성 분석**: 보수/진보/중립 성향 자동 분류
-- **📊 실시간 데이터 처리**: 대용량 뉴스 데이터 스트리밍 처리
+- **📊 정기 배치 크롤링**: 27개 언론사 자동 수집 (매 2시간)
 - **🔍 고급 검색**: OpenSearch 기반 한국어 형태소 분석
-- **🌐 멀티소스 크롤링**: 네이버, RSS, 동적 웹페이지 수집
-- **📈 시각화 대시보드**: 편향성 트렌드 및 키워드 분석
+- **🌐 하이브리드 크롤링**: Java-Python 통합 아키텍처
+- **📈 실시간 대시보드**: 편향성 트렌드 및 키워드 분석
 
 </details>
 
@@ -176,13 +177,13 @@ graph TB
 <td>
 
 **Live Data Pipeline**
-- Java-Python 하이브리드 크롤링
+- 정기 배치 크롤링 (매 2시간, 27개 언론사)
+- 속보 크롤링 (매 30분, 주요 시간대)
+- Java-Python 하이브리드 아키텍처
 - RabbitMQ 고도화된 메시지 큐 통신
-- Dead Letter Queue & 자동 재시도
 - Redis 분산 락 동시성 제어
+- Spring Batch 스케줄링 시스템
 - WebSocket 진행상황 추적
-- 실시간 스트리밍 데이터 처리
-- 자동 카테고리 분류
 
 </td>
 <td>
@@ -226,6 +227,8 @@ def analyze_news(article):
 
 | 📖 Guide | 🎯 Purpose | 🔗 Link |
 |----------|------------|---------|
+| **📡 API 최신 개요** | 현재 구현된 API 아키텍처 | [Updated API Overview](docs/UPDATED_API_OVERVIEW.md) |
+| **🔄 배치 크롤링** | 정기 크롤링 시스템 가이드 | [Batch System](docs/UPDATED_API_OVERVIEW.md#정기-크롤링-배치-시스템-new) |
 | **🐍 Python Crawler** | Python 크롤러 완전 가이드 | [Python Crawler](python_crawler_advanced/README.md) |
 | **🔥 하이브리드 시스템** | Java-Python 통합 아키텍처 | [Hybrid System Guide](docs/HYBRID_SYSTEM_GUIDE.md) |
 | **🚀 Quick Start** | Docker 환경 설정 | [Docker Setup](docs/DOCKER_SETUP.md) |
@@ -335,34 +338,46 @@ docker build -t factory-be .             # Docker build
 📁 Factory BE
 ├── 🌟 src/main/java/com/commonground/be/
 │   ├── 🏛️ domain/                 # Business Logic Layer
-│   │   ├── 🔐 auth/               # Authentication & JWT
-│   │   ├── 📰 news/               # News Domain (SOLID 원칙 준수)
-│   │   │   ├── exception/         # Exception Handling (CommonException 기반)
+│   │   ├── 🔐 auth/               # 소셜 로그인 인증 (Kakao, Google)
+│   │   │   ├── controller/        # AuthController (JWT 토큰 관리)
+│   │   │   ├── facade/            # AuthFacade (인증 파이프라인)
+│   │   │   └── service/           # AuthServiceImpl (로그인/로그아웃)
+│   │   ├── 🧠 analysis/           # AI 편향성 분석
+│   │   │   ├── controller/        # AnalysisController
+│   │   │   ├── facade/            # AnalysisFacade (분석 파이프라인)
+│   │   │   └── service/           # AnalysisServiceImpl + Mock AI Services
+│   │   ├── 📰 news/               # 뉴스 관리 및 크롤링
+│   │   │   ├── controller/        # NewsController, BatchController
+│   │   │   ├── facade/            # NewsFacade (크롤링 파이프라인)
 │   │   │   ├── service/
-│   │   │   │   ├── crawling/      # Java 크롤링 서비스 계층
-│   │   │   │   │   ├── CrawlingService.java      # 크롤링 인터페이스
-│   │   │   │   │   ├── CrawlingOrchestrator.java # 크롤링 전략 조율
-│   │   │   │   │   ├── CrawlingQueueService.java # RabbitMQ 큐 서비스
-│   │   │   │   │   └── naver/                    # 네이버 전용 구현체
-│   │   │   │   │       └── NaverNewsCrawler.java # Java 크롤러 (Redis Lock)
-│   │   │   │   ├── NewsManagementService.java    # 뉴스 CRUD + 캐시 관리
-│   │   │   │   ├── NewsQueryService.java         # 뉴스 조회/검색 + 통계
-│   │   │   │   ├── NewsCollectionService.java    # 뉴스 수집 총괄
-│   │   │   │   ├── NewsDataProcessingService.java # 데이터 변환/처리
-│   │   │   │   └── NewsServiceImpl.java          # 기존 인터페이스 (위임)
-│   │   │   ├── controller/
-│   │   │   ├── dto/
-│   │   │   ├── entity/
-│   │   │   ├── enums/
-│   │   │   └── repository/
-│   │   ├── 👥 social/             # Social Login (Kakao, Google)
-│   │   └── 👤 user/               # User Management
+│   │   │   │   ├── crawling/      # CrawlingOrchestrationService
+│   │   │   │   ├── search/        # OpenSearchIndexingService
+│   │   │   │   └── NewsServiceImpl
+│   │   │   └── dto/request/       # NaverCrawlingRequest, UrlCrawlingRequest
+│   │   ├── 🔍 search/             # OpenSearch 기반 검색
+│   │   │   ├── controller/        # SearchController
+│   │   │   ├── facade/            # SearchFacade
+│   │   │   └── service/           # SearchServiceImpl, AutocompleteService
+│   │   ├── 📊 dashboard/          # 대시보드 데이터
+│   │   │   ├── controller/        # DashboardController
+│   │   │   ├── facade/            # DashboardFacade
+│   │   │   └── service/           # DashboardService, PopularSearchService
+│   │   └── 👤 user/               # 소셜 계정 사용자 관리
+│   │       ├── controller/        # SimplifiedUserController
+│   │       ├── facade/            # SocialUserFacade
+│   │       └── service/           # SocialUserService (소셜 전용)
 │   └── 🌐 global/                 # Infrastructure Layer
 │       ├── 📡 application/        # API Response & Exception Handling
 │       ├── 📦 domain/             # Shared Domain Objects
 │       └── ⚙️ infrastructure/     # Database, Security, Encryption
 │           ├── concurrency/       # Redis 분산 락 (@RedisLock)
-│           └── config/            # RabbitMQ, Redis, MongoDB 설정
+│           ├── config/            # RabbitMQ, Redis, MongoDB, Batch 설정
+│           │   ├── BatchConfig.java         # Spring Batch 설정
+│           │   ├── SchedulingConfig.java    # 스케줄링 활성화
+│           │   └── UnifiedRabbitMQConfig.java # 통합 메시지 큐 설정
+│           ├── scheduler/         # 정기 크롤링 스케줄러
+│           │   └── CrawlingScheduler.java   # 배치 스케줄 관리
+│           └── messaging/         # 메시지 큐 통신
 ├── 🐍 python_crawler_advanced/    # Python 크롤러 서비스
 │   ├── naver_crawler_complete.py  # Java 1:1 완전 포팅 크롤러
 │   ├── redis_distributed_lock.py  # Python Redis 분산 락
@@ -383,11 +398,18 @@ docker build -t factory-be .             # Docker build
 - **메시지 큐 통신**: RabbitMQ를 통한 안정적인 비동기 통신
 - **실시간 모니터링**: WebSocket + Redis 캐시를 통한 진행상황 추적
 
+**Spring Batch 정기 크롤링 시스템** 📅
+- **정기 크롤링**: 매 2시간마다 (오전 6시~오후 10시)
+- **속보 크롤링**: 매 30분마다 (오전 7시~오후 11시)
+- **새벽 크롤링**: 매일 새벽 3시 (야간 뉴스 수집)
+- **주간 종합**: 매주 일요일 오전 1시 (전체 언론사 대상)
+- **27개 언론사**: 주요 일간지, 경제지, 방송사 포함
+
 **SOLID 원칙 적용 완료** ✅
-- **SRP**: 각 서비스가 단일 책임만 담당 (기존 607줄 god class → 4개 전문 서비스로 분리)
+- **SRP**: 각 서비스가 단일 책임만 담당 (Facade 패턴 적용)
 - **OCP**: CrawlingService 인터페이스로 새 플랫폼 크롤러 쉽게 확장
-- **ISP**: Java vs Python 크롤링 인터페이스 분리
-- **DIP**: 추상화 의존 + 메시지 큐 패턴
+- **ISP**: 도메인별 인터페이스 분리 (Auth, News, Analysis, Search, Dashboard)
+- **DIP**: 추상화 의존 + 메시지 큐 패턴 + Spring Batch
 
 ## 🧪 Testing
 

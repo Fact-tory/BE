@@ -1,0 +1,81 @@
+### OAuth2 소셜로그인 테스트
+### CommonGround OAuth2 인증 테스트
+
+### 1. Google OAuth2 로그인 - 브라우저에서 테스트
+# 브라우저에서 직접 접속하세요
+# http://localhost:8080/oauth2/authorization/google
+
+### 2. Kakao OAuth2 로그인 - 브라우저에서 테스트  
+# 브라우저에서 직접 접속하세요
+# http://localhost:8080/oauth2/authorization/kakao
+
+### 3. 인증 상태 확인 (로그인 후 실행)
+GET {{base_url}}/api/v1/auth/me
+Authorization: Bearer {{access_token}}
+Accept: */*
+
+### 4. 토큰 검증 API 테스트
+GET {{base_url}}/api/v1/auth/validate
+Authorization: Bearer {{access_token}}
+Accept: */*
+
+### 5. 토큰 재발급 테스트 (만료된 토큰으로)
+# 방법 1: Authorization 헤더 방식
+POST {{base_url}}/api/v1/auth/reissue
+Authorization: Bearer {{access_token}}
+Accept: */*
+
+### 5-2. 토큰 재발급 테스트 (쿠키 방식)
+# 방법 2: 쿠키 방식 (OAuth2 로그인 후 자동으로 설정되는 방식)
+POST {{base_url}}/api/v1/auth/reissue
+Accept: */*
+
+### 6. 로그아웃 테스트
+POST {{base_url}}/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "everywhere": false,
+  "kakaoAccessToken": null
+}
+
+### 7. 전체 기기 로그아웃 테스트
+POST {{base_url}}/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "everywhere": true,
+  "kakaoAccessToken": null
+}
+
+### 8. 회원탈퇴 테스트
+POST {{base_url}}/api/v1/auth/withdraw
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "reason": "테스트용 탈퇴",
+  "feedback": "OAuth2 연동 테스트 완료"
+}
+
+### === OAuth2 디버깅용 엔드포인트 (개발용) ===
+
+### 8. OAuth2 인증 URL 확인 (직접 API 호출)
+GET http://localhost:8080/oauth2/authorization/google
+Accept: text/html
+
+### 9. OAuth2 콜백 확인 (수동 테스트용 - 실제로는 브라우저에서 자동 호출됨)
+# GET http://localhost:8080/login/oauth2/code/google?code=AUTHORIZATION_CODE&state=STATE
+
+### === 환경 변수 설정 예시 ===
+# @access_token = your_jwt_access_token_here
+# @refresh_token = your_jwt_refresh_token_here
+
+### === 테스트 순서 ===
+# 1. 환경변수 확인 (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET 등)
+# 2. 애플리케이션 실행
+# 3. 브라우저에서 Google/Kakao 로그인 테스트
+# 4. 개발자 도구에서 쿠키 확인 (AccessToken, refresh-token)
+# 5. 위의 API 엔드포인트들을 순서대로 테스트

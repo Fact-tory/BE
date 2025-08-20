@@ -5,7 +5,9 @@
 
 ### 1. 관리자 토큰 설정
 # Spring Boot 애플리케이션 실행 시 콘솔 로그에 출력된 관리자 토큰을 설정하세요
-@adminToken = PHpu/oRjsFKDhN6kJtCF5Ij9slbIoT3ITDlYlYIeS3c=
+@adminToken = {{admin_token}}
+@baseUrl = {{base_url}}
+@accessToken = {{access_token}}
 
 ### ========================================
 ### 네이버 API 뉴스 수집 (Java 직접 처리)

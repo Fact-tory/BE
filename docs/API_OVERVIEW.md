@@ -1,144 +1,249 @@
 # 📡 Factory BE API 개요
 
-> Java Backend + Python Crawler 하이브리드 시스템의 RESTful API 아키텍처
+> 소셜 로그인 기반 뉴스 분석 플랫폼의 RESTful API 아키텍처
 
-## 🎯 API 설계 원칙
+## 🎯 현재 구현된 API 구조
 
-### 1. 도메인 중심 설계
+### 1. 도메인 기반 API 설계
 ```
-/api/v1/auth/*      # 인증 및 권한
-/api/v1/news/*      # 뉴스 관리 및 Python 크롤링 제어
-/api/v1/crawling/*  # 하이브리드 크롤링 API (RabbitMQ 통신)
-/api/v1/analysis/*  # AI 분석 기능
-/api/v1/search/*    # 검색 기능
-/api/v1/users/*     # 사용자 관리
+/api/v1/auth/*        # 소셜 로그인 인증 (Kakao, Google)
+/api/v1/news/*        # 뉴스 관리 및 크롤링
+/api/v1/analysis/*    # AI 분석 기능
+/api/v1/search/*      # OpenSearch 기반 검색
+/api/v1/dashboard/*   # 대시보드 데이터
+/api/v1/users/*       # 사용자 관리 (소셜 계정만)
+/api/v1/batch/*       # 배치 작업 제어 (관리자 전용)
 ```
 
-### 2. HTTP 메서드 컨벤션
-- `GET` - 조회 (검색, 목록, 상세, 크롤링 진행상황)
-- `POST` - 생성 (Python 크롤링 시작, AI 분석, 사용자 등록)
-- `PUT` - 전체 수정
-- `PATCH` - 부분 수정
-- `DELETE` - 삭제
+### 2. 현재 구현된 주요 컨트롤러
 
-### 3. 응답 형식 표준화
-> 📁 [ApiResponse.java](src/main/java/com/commonground/be/global/application/response/ApiResponse.java)
+#### 🔐 AuthController
+- **위치**: `src/main/java/com/commonground/be/domain/auth/controller/AuthController.java`
+- **기능**: JWT 기반 소셜 로그인 인증
+- **주요 엔드포인트**:
+  ```
+  POST /api/v1/auth/reissue          # 토큰 갱신
+  GET  /api/v1/auth/me               # 현재 사용자 정보
+  POST /api/v1/auth/logout           # 로그아웃 (단일/전체 기기)
+  POST /api/v1/auth/withdraw         # 회원 탈퇴
+  GET  /api/v1/auth/kakao/logout-url # 카카오 로그아웃 URL
+  ```
 
+#### 📰 NewsController  
+- **위치**: `src/main/java/com/commonground/be/domain/news/controller/NewsController.java`
+- **기능**: 뉴스 CRUD 및 크롤링 제어
+- **주요 엔드포인트**:
+  ```
+  GET    /api/v1/news               # 뉴스 목록 조회
+  POST   /api/v1/news               # 뉴스 생성
+  GET    /api/v1/news/{id}          # 뉴스 상세 조회
+  PUT    /api/v1/news/{id}          # 뉴스 수정
+  DELETE /api/v1/news/{id}          # 뉴스 삭제
+  POST   /api/v1/news/crawl/naver   # 네이버 크롤링 시작
+  POST   /api/v1/news/crawl/url     # URL 크롤링
+  GET    /api/v1/news/recent        # 최신 뉴스
+  GET    /api/v1/news/trending      # 급상승 뉴스
+  ```
+
+#### 🔍 SearchController
+- **위치**: `src/main/java/com/commonground/be/domain/search/controller/SearchController.java`
+- **기능**: OpenSearch 기반 고급 검색
+- **주요 엔드포인트**:
+  ```
+  GET /api/v1/search/news               # 통합 뉴스 검색
+  GET /api/v1/search/my-analyses        # 내 분석 검색
+  GET /api/v1/search/popular            # 인기 검색어
+  GET /api/v1/search/realtime-popular   # 실시간 검색어
+  GET /api/v1/search/autocomplete       # 검색 자동완성
+  GET /api/v1/search/statistics         # 검색 통계
+  GET /api/v1/search/history            # 검색 히스토리
+  ```
+
+#### 🧠 AnalysisController
+- **위치**: `src/main/java/com/commonground/be/domain/analysis/controller/AnalysisController.java`
+- **기능**: AI 기반 뉴스 분석
+- **주요 엔드포인트**:
+  ```
+  POST   /api/v1/analysis              # 분석 시작
+  GET    /api/v1/analysis/{id}         # 분석 결과 조회
+  GET    /api/v1/analysis/{id}/status  # 분석 상태 조회
+  GET    /api/v1/analysis/my           # 내 분석 목록
+  DELETE /api/v1/analysis/{id}         # 분석 취소
+  POST   /api/v1/analysis/{id}/restart # 분석 재시작
+  ```
+
+#### 📊 DashboardController
+- **위치**: `src/main/java/com/commonground/be/domain/dashboard/controller/DashboardController.java`
+- **기능**: 대시보드 데이터 제공
+- **주요 엔드포인트**:
+  ```
+  GET /api/v1/dashboard/main      # 메인 대시보드
+  GET /api/v1/dashboard/user      # 사용자 대시보드
+  GET /api/v1/dashboard/category  # 카테고리별 뉴스
+  ```
+
+#### 🔄 BatchController (NEW!)
+- **위치**: `src/main/java/com/commonground/be/domain/news/controller/BatchController.java`
+- **기능**: 정기 크롤링 배치 제어
+- **주요 엔드포인트**:
+  ```
+  POST /api/v1/batch/naver/crawling/start  # 배치 수동 실행
+  GET  /api/v1/batch/status                # 배치 상태 조회
+  GET  /api/v1/batch/schedule              # 스케줄 설정 조회
+  GET  /api/v1/batch/config                # 배치 설정 조회
+  ```
+
+## 🚀 정기 크롤링 배치 시스템 (NEW!)
+
+### 배치 스케줄
+- **정기 크롤링**: 매 2시간마다 (6-22시)
+- **속보 크롤링**: 매 30분마다 (7-23시)  
+- **새벽 크롤링**: 매일 새벽 3시
+- **주간 종합**: 매주 일요일 오전 1시
+
+### 크롤링 대상 언론사 (27개 설정)
+```yaml
+주요 일간지:
+  - 경향신문, 동아일보, 조선일보, 중앙일보
+  - 한겨레, 한국일보, 국민일보, 문화일보, 세계일보
+
+경제 전문지:
+  - 매일경제, 머니투데이, 조선비즈
+
+방송사:
+  - SBS, KBS, MBC, YTN, 뉴스1
+
+카테고리별 수집:
+  - 정치: 12개 언론사, 각 30개 기사
+  - 경제: 7개 언론사, 각 25개 기사  
+  - 사회: 5개 언론사, 각 20개 기사
+```
+
+## 📊 현재 구현된 Facade 패턴
+
+### 1. AnalysisFacade
+- **위치**: `src/main/java/com/commonground/be/domain/analysis/facade/AnalysisFacade.java`
+- **책임**: 분석 요청 파이프라인 관리
+- **주요 메서드**:
+  ```java
+  AnalysisFlowResult createAnalysisFlow(UserDetails, AnalysisStartRequest)
+  AnalysisFlowResult getAnalysisFlow(UserDetails, String analysisId)
+  AnalysisFlowResult getUserAnalysesFlow(UserDetails, int page, int size)
+  AnalysisFlowResult deleteAnalysisFlow(UserDetails, String analysisId)
+  AnalysisFlowResult restartAnalysisFlow(UserDetails, String analysisId)
+  ```
+
+### 2. AuthFacade
+- **위치**: `src/main/java/com/commonground/be/domain/auth/facade/AuthFacade.java`
+- **책임**: 인증 프로세스 조율
+- **주요 메서드**:
+  ```java
+  AuthFlowResult socialLoginFlow(String provider, SocialLoginRequest)
+  AuthFlowResult refreshTokenFlow(String refreshToken)
+  AuthFlowResult logoutFlow(UserDetails, LogoutRequest)
+  ```
+
+### 3. SearchFacade
+- **위치**: `src/main/java/com/commonground/be/domain/search/facade/SearchFacade.java`
+- **책임**: 검색 요청 파이프라인 관리
+- **주요 메서드**:
+  ```java
+  SearchFlowResult unifiedSearchFlow(SearchRequest)
+  SearchFlowResult autocompleteFlow(String query, int limit)
+  SearchFlowResult getSearchHistoryFlow(UserDetails, int page, int size)
+  ```
+
+### 4. DashboardFacade
+- **위치**: `src/main/java/com/commonground/be/domain/dashboard/facade/DashboardFacade.java`
+- **책임**: 대시보드 데이터 집계 관리
+- **주요 메서드**:
+  ```java
+  DashboardFlowResult getMainDashboardFlow(int, int, int, int)
+  DashboardFlowResult getUserDashboardFlow(UserDetails, int limit)
+  ```
+
+### 5. NewsFacade
+- **위치**: `src/main/java/com/commonground/be/domain/news/facade/NewsFacade.java`
+- **책임**: 뉴스 관리 및 크롤링 파이프라인
+- **주요 메서드**:
+  ```java
+  NewsFlowResult naverCrawlingFlow(NaverCrawlingRequest)
+  NewsFlowResult urlCrawlingFlow(UrlCrawlingRequest)
+  NewsFlowResult getRecentNewsFlow(int limit)
+  NewsFlowResult getTrendingNewsFlow(int limit)
+  ```
+
+## 🔧 핵심 서비스 계층
+
+### 1. CrawlingOrchestrationService
+- **위치**: `src/main/java/com/commonground/be/domain/news/service/crawling/CrawlingOrchestrationService.java`
+- **책임**: Python 크롤러와의 통신 관리
+- **주요 메서드**:
+  ```java
+  CompletableFuture<List<RawNewsData>> orchestrateCrawling(NaverCrawlingRequest)
+  CompletableFuture<List<RawNewsData>> crawlNews(NaverCrawlingRequest)
+  ```
+
+### 2. OpenSearchIndexingService
+- **위치**: `src/main/java/com/commonground/be/domain/news/service/search/OpenSearchIndexingService.java`
+- **책임**: OpenSearch 인덱싱 및 검색
+- **주요 메서드**:
+  ```java
+  CompletableFuture<Void> indexNews(News)
+  SearchResult searchNews(String keyword, int page, int size)
+  CompletableFuture<Void> deleteNews(String newsId)
+  ```
+
+### 3. AnalysisServiceImpl
+- **위치**: `src/main/java/com/commonground/be/domain/analysis/service/AnalysisServiceImpl.java`
+- **책임**: AI 분석 작업 관리
+- **주요 메서드**:
+  ```java
+  AnalysisResponse startAnalysis(String userId, AnalysisStartRequest)
+  AnalysisResultResponse getAnalysisResult(String userId, Long analysisId)
+  MyAnalysesResponse getMyAnalyses(String userId, Pageable)
+  ```
+
+## 🔐 소셜 로그인 아키텍처
+
+### 지원 플랫폼
+- **Kakao**: OAuth 2.0 기반 인증
+- **Google**: OAuth 2.0 기반 인증
+
+### 인증 플로우
+```mermaid
+graph LR
+    A[프론트엔드] --> B[소셜 로그인 URL 요청]
+    B --> C[AuthController]
+    C --> D[소셜 플랫폼 리다이렉트]
+    D --> E[사용자 인증]
+    E --> F[AuthController 콜백]
+    F --> G[JWT 토큰 발급]
+    G --> H[사용자 정보 반환]
+```
+
+### JWT 토큰 관리
+- **Access Token**: 1시간 (보안 강화)
+- **Refresh Token**: 14일 (장기간 로그인 유지)
+- **쿠키 기반**: HttpOnly, Secure 쿠키로 Refresh Token 관리
+
+## 🎯 API 응답 표준화
+
+### 성공 응답
 ```json
 {
   "success": true,
-  "data": { /* 실제 데이터 */ },
+  "data": {
+    // 실제 데이터
+  },
   "meta": {
     "version": "v1.0",
-    "timestamp": "2025-08-12T10:30:00Z"
+    "timestamp": "2025-08-17T10:30:00Z"
   }
 }
 ```
 
-## 🔐 인증 시스템
-
-### JWT 토큰 기반 인증
-> 📁 [JwtTokenProvider.java](src/main/java/com/commonground/be/global/application/security/JwtTokenProvider.java)
-
-```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-### 소셜 로그인 지원
-- **Kakao**: [📁 KakaoService.java](src/main/java/com/commonground/be/domain/social/kakao/service/KakaoService.java)
-- **Google**: [📁 GoogleService.java](src/main/java/com/commonground/be/domain/social/google/service/GoogleService.java)
-
-## 📊 데이터 플로우
-
-### 하이브리드 뉴스 수집 파이프라인
-```mermaid
-graph LR
-    A[네이버 뉴스 API] --> B[Python 크롤러]
-    B --> C[RabbitMQ] 
-    C --> D[Java Backend]
-    D --> E[MongoDB 저장]
-    E --> F[AI 분석]
-    F --> G[OpenSearch 인덱싱]
-    G --> H[사용자 검색]
-```
-
-### 핵심 서비스 (하이브리드 아키텍처)
-1. **크롤링 오케스트레이션**: [📁 CrawlingOrchestrationService.java](src/main/java/com/commonground/be/domain/news/service/CrawlingOrchestrationService.java)
-2. **메시지 큐 통신**: [📁 CrawlingQueueService.java](src/main/java/com/commonground/be/domain/news/service/CrawlingQueueService.java)
-3. **Python 크롤러**: [📁 enhanced_crawler_worker.py](python_crawler_advanced/enhanced_crawler_worker.py)
-4. **AI 분석**: [📁 NewsServiceImpl.java](src/main/java/com/commonground/be/domain/news/service/NewsServiceImpl.java)
-5. **검색 인덱싱**: [📁 OpenSearchIndexingService.java](src/main/java/com/commonground/be/domain/news/service/OpenSearchIndexingService.java)
-
-## 🚀 실시간 기능
-
-### WebSocket 연결
-> 📁 [WebSocketConfig.java](src/main/java/com/commonground/be/global/infrastructure/config/WebSocketConfig.java)
-
-```javascript
-const ws = new WebSocket('ws://localhost:8080/api/v1/ws/analysis/{sessionId}');
-```
-
-### 진행 상황 추적
-> 📁 [WebSocketProgressService.java](src/main/java/com/commonground/be/domain/news/service/WebSocketProgressService.java)
-
-```json
-{
-  "type": "progress_update",
-  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "progress": 75,
-  "currentStep": "AI 편향성 분석 중...",
-  "estimatedRemaining": 15
-}
-```
-
-## 📈 성능 최적화
-
-### 캐싱 전략
-> 📁 [RedisConfig.java](src/main/java/com/commonground/be/global/infrastructure/config/RedisConfig.java)
-
-- **Redis**: 실시간 데이터, 세션 관리
-- **애플리케이션 레벨**: Spring Cache 활용
-- **데이터베이스**: 인덱스 최적화
-
-### 페이지네이션
-```http
-GET /api/v1/news/realtime?page=1&limit=20
-```
-
-```json
-{
-  "data": {
-    "items": [...],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 1500,
-      "totalPages": 75
-    }
-  }
-}
-```
-
-## 🛡️ 보안 기능
-
-### 입력 검증
-> 📁 [CreateNewsRequest.java](src/main/java/com/commonground/be/domain/news/dto/request/CreateNewsRequest.java)
-
-- Bean Validation 활용
-- 커스텀 검증 어노테이션
-- SQL Injection 방지
-
-### 데이터 암호화
-> 📁 [FieldEncryption.java](src/main/java/com/commonground/be/global/infrastructure/encryption/FieldEncryption.java)
-
-- 개인정보 필드 암호화
-- AES-256 암호화 알고리즘
-
-## 📝 에러 처리
-
-### 전역 예외 핸들러
-> 📁 [GlobalExceptionAdvice.java](src/main/java/com/commonground/be/global/application/exception/GlobalExceptionAdvice.java)
-
+### 오류 응답
 ```json
 {
   "success": false,
@@ -147,81 +252,52 @@ GET /api/v1/news/realtime?page=1&limit=20
     "message": "잘못된 파라미터입니다",
     "details": {
       "field": "category",
-      "value": "5",
-      "reason": "유효하지 않은 카테고리 ID"
+      "value": "invalid",
+      "reason": "유효하지 않은 카테고리"
     }
   },
-  "timestamp": "2025-08-12T10:30:00Z"
+  "timestamp": "2025-08-17T10:30:00Z"
 }
 ```
 
-### 커스텀 예외 클래스
-- [📁 NewsExceptions.java](src/main/java/com/commonground/be/global/application/exception/NewsExceptions.java)
-- [📁 AuthExceptions.java](src/main/java/com/commonground/be/global/application/exception/AuthExceptions.java)
-- [📁 CrawlerExceptions.java](src/main/java/com/commonground/be/global/application/exception/CrawlerExceptions.java)
+## 🧪 테스트 환경
 
-## 🔍 API 문서
-
-### 상세 문서
-- [REST API 명세서](rest-api.md) - 모든 엔드포인트 상세 설명
-- [데이터베이스 스키마](schema.md) - DB 구조 및 관계
-- [ERD 다이어그램](mermaid.md) - 시각적 데이터 구조
-
-### 개발 도구
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI 3.0**: 자동 문서 생성
-- **Postman Collection**: API 테스트 컬렉션
-
-## 🚀 고도화된 메시지 처리
-
-### RabbitMQ 고급 기능
-> 📁 [RabbitMQAdvancedConfig.java](src/main/java/com/commonground/be/global/infrastructure/config/RabbitMQAdvancedConfig.java)
-
-- **Dead Letter Queue**: 실패한 메시지 처리
-- **메시지 재시도**: 지수적 백오프 전략
-- **타임아웃 처리**: 장시간 응답 없는 메시지 처리
-- **헬스체크**: Python 크롤러 상태 모니터링
-
-### 메시지 처리 흐름
-```mermaid
-graph TD
-    A[크롤링 요청] --> B[Enhanced Message Queue]
-    B --> C{성공?}
-    C -->|예| D[결과 반환]
-    C -->|실패| E[재시도 큐]
-    E --> F{재시도 횟수}
-    F -->|<3회| B
-    F -->|≥3회| G[Dead Letter Queue]
-    G --> H[실패 처리]
+### HTTP 테스트 파일
+```
+tests/api/01_auth.http          # 인증 API 테스트
+tests/api/02_news.http          # 뉴스 API 테스트  
+tests/api/03_analysis.http      # 분석 API 테스트
+tests/api/04_search.http        # 검색 API 테스트
+tests/api/05_dashboard.http     # 대시보드 API 테스트
+tests/api/06_batch.http         # 배치 API 테스트 (NEW!)
 ```
 
-### 향상된 기능
-> 📁 [EnhancedMessageProcessingService.java](src/main/java/com/commonground/be/domain/news/service/EnhancedMessageProcessingService.java)
+## 📈 성능 최적화
 
-- **실패 원인 분석**: Redis에 실패 로그 저장
-- **자동 재시도**: 네트워크 오류 등 일시적 실패 자동 복구
-- **상태 모니터링**: 실시간 시스템 상태 추적
-- **타임아웃 관리**: 장시간 응답 없는 요청 감지 및 처리
+### OpenSearch 쿼리 최적화
+- 가중치 기반 멀티필드 검색 (제목 3.0x, 키워드 2.5x)
+- 한글 키워드 전처리 및 불용어 제거
+- 퍼지 매칭으로 오타 허용
+- 관련도 + 날짜 순 정렬
 
-## 🧪 테스팅
+### Redis 캐싱 전략
+- 검색 결과 캐싱 (10분)
+- 대시보드 데이터 캐싱 (5분)
+- 인기 검색어 캐싱 (1시간)
 
-### API 테스트
-> 📁 [NewsApiIntegrationTest.java](src/test/java/com/commonground/be/integration/NewsApiIntegrationTest.java)
+## 🔒 보안 및 권한
 
-```bash
-# 전체 테스트 실행
-./scripts/dev-app.sh test
+### 권한 체계
+- **USER**: 일반 사용자 (뉴스 조회, 검색, 분석)
+- **MANAGER**: 관리자 (배치 제어, 통계 조회)
+- **ADMIN**: 최고 관리자 (전체 시스템 제어)
 
-# 통합 테스트만 실행
-./scripts/dev-app.sh test integration
-```
-
-### 테스트 커버리지
-```bash
-# 커버리지 리포트 생성
-./scripts/dev-app.sh test coverage
-```
+### API 보안
+- JWT 토큰 검증
+- `@PreAuthorize` 어노테이션 기반 권한 검사
+- 입력 검증 (Bean Validation)
+- SQL Injection 방지
 
 ---
 
-**💡 팁**: API 개발 시 [REST API 명세서](rest-api.md)를 참조하여 일관된 인터페이스를 구현하세요!
+**💡 참고**: 이 문서는 현재 구현된 코드를 기반으로 작성되었습니다. 실제 API 사용 시 [REST API 상세 명세서](rest-api.md)를 참조하세요.
