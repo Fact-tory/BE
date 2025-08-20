@@ -1,0 +1,29 @@
+### 📊 2. 대시보드 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+@adminToken = q8qAG4YoEC6t2z7P4pJyUazZ30bIiYkq9PFp3ac9uVo=
+
+### 2.1 메인 대시보드 (기본 설정)
+GET {{baseUrl}}/dashboard/main
+Content-Type: application/json
+X-Admin-Token: {{adminToken}}
+
+
+
+### 2.2 메인 대시보드 (커스텀 파라미터)
+GET {{baseUrl}}/dashboard/main?realtime_limit=30&trending_limit=15&category_limit=8&search_limit=15
+
+### 2.3 메인 대시보드 (최소 설정)
+GET {{baseUrl}}/dashboard/main?realtime_limit=5&trending_limit=3&category_limit=3&search_limit=5
+
+### 2.4 메인 대시보드 (최대 설정)
+GET {{baseUrl}}/dashboard/main?realtime_limit=50&trending_limit=20&category_limit=10&search_limit=20
+
+### 2.5 사용자별 맞춤 대시보드
+GET {{baseUrl}}/dashboard/user
+Authorization: Bearer {{accessToken}}
+
+### 2.6 사용자 대시보드 (인증 없이 - 실패 예상)
+GET {{baseUrl}}/dashboard/user
