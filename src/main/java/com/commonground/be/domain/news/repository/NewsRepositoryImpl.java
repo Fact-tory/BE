@@ -170,4 +170,22 @@ public class NewsRepositoryImpl implements NewsRepository {
 				.and("deletedAt").isNull());
 		return mongoTemplate.exists(query, News.class);
 	}
+	
+	@Override
+	public void delete(News news) {
+		mongoTemplate.remove(news);
+	}
+	
+	@Override
+	public void incrementViewCount(String id) {
+		Query query = new Query(Criteria.where("id").is(id));
+		Update update = new Update().inc("viewCount", 1);
+		mongoTemplate.updateFirst(query, update, News.class);
+	}
+	
+	@Override
+	public long getTotalCount() {
+		Query query = new Query(Criteria.where("deletedAt").isNull());
+		return mongoTemplate.count(query, News.class);
+	}
 }

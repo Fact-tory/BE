@@ -110,13 +110,17 @@ public class OpenSearchIndexingService {
 			SearchRequest searchRequest = new SearchRequest(NEWS_INDEX);
 			SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
 
+			// 한글 키워드 전처리
+			String processedKeyword = preprocessKoreanKeyword(keyword);
+
 			// 가중치를 적용한 멀티 필드 검색 쿼리
 			MultiMatchQueryBuilder multiMatchQuery = QueryBuilders
-					.multiMatchQuery(keyword)
+					.multiMatchQuery(processedKeyword)
 					.field("title", 3.0f)        // 제목에 가장 높은 가중치 (3배)
 					.field("summary", 2.0f)      // 요약에 중간 가중치 (2배)
 					.field("content", 1.0f)      // 본문은 기본 가중치 (1배)
 					.field("keywords", 2.5f)     // 키워드에 높은 가중치 (2.5배)
+					.field("fullText", 1.5f)     // 통합 텍스트 필드
 					.type(MultiMatchQueryBuilder.Type.BEST_FIELDS)
 					.fuzziness(Fuzziness.AUTO)           // 오타 허용 (자동 퍼지 매칭)
 					.operator(org.opensearch.index.query.Operator.OR);  // OR 연산자로 유연한 매칭
@@ -129,13 +133,17 @@ public class OpenSearchIndexingService {
 			sourceBuilder.query(boolQuery)
 					.from((page - 1) * size)
 					.size(size)
-					.sort("publishedAt", SortOrder.DESC)
+					.sort("_score", SortOrder.DESC)      // 관련도 우선 정렬
+					.sort("publishedAt", SortOrder.DESC) // 그 다음 날짜순
 					.highlighter(new HighlightBuilder()
 							.field("title")
 							.field("content")
 							.field("summary")   // 요약에서도 하이라이트 표시
+							.field("keywords")  // 키워드 하이라이트 추가
 							.preTags("<mark>")
-							.postTags("</mark>"));
+							.postTags("</mark>")
+							.fragmentSize(150)  // 하이라이트 조각 크기
+							.numOfFragments(3)); // 최대 3개 조각
 
 			searchRequest.source(sourceBuilder);
 
@@ -225,11 +233,41 @@ public class OpenSearchIndexingService {
 	}
 
 	/**
+	 * 한글 키워드 전처리 (검색 정확도 향상)
+	 */
+	private String preprocessKoreanKeyword(String keyword) {
+		if (keyword == null || keyword.trim().isEmpty()) {
+			return keyword;
+		}
+		
+		// 1. 공백 정리 및 소문자 변환
+		String processed = keyword.trim().toLowerCase();
+		
+		// 2. 특수문자 제거 (검색에 불필요한 문자들)
+		processed = processed.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ");
+		
+		// 3. 연속된 공백을 하나로 통합
+		processed = processed.replaceAll("\\s+", " ");
+		
+		// 4. 불용어 제거
+		String[] words = processed.split("\\s+");
+		List<String> filteredWords = new ArrayList<>();
+		for (String word : words) {
+			if (!isStopWord(word) && word.length() >= 2) {
+				filteredWords.add(word);
+			}
+		}
+		
+		return filteredWords.isEmpty() ? keyword.trim() : String.join(" ", filteredWords);
+	}
+
+	/**
 	 * 불용어 체크 (조사, 접속사 등 검색에 불필요한 단어들)
 	 */
 	private boolean isStopWord(String word) {
 		List<String> stopWords = List.of("이", "그", "저", "것", "들", "은", "는", "이", "가",
-				"을", "를", "에", "와", "과", "로", "으로", "의", "도");
+				"을", "를", "에", "와", "과", "로", "으로", "의", "도", "에서", "부터", "까지", 
+				"만", "뿐", "조차", "마저", "하는", "하며", "하고", "그리고", "또한", "그런데");
 		return stopWords.contains(word);
 	}
 

@@ -2,7 +2,7 @@ package com.commonground.be.domain.news.service.crawling;
 
 import com.commonground.be.domain.news.dto.crawling.RawNewsData;
 import com.commonground.be.domain.news.dto.request.NaverCrawlingRequest;
-import com.commonground.be.domain.news.service.communication.CrawlingQueueService;
+import com.commonground.be.global.infrastructure.messaging.CrawlingMessageService;
 import com.commonground.be.domain.news.service.communication.WebSocketProgressService;
 import com.commonground.be.domain.news.service.management.NewsDataProcessingService;
 import com.commonground.be.global.application.aop.LogExecutionTime;
@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class CrawlingOrchestrationService {
 
-    private final CrawlingQueueService crawlingQueueService;
+    private final CrawlingMessageService crawlingMessageService;
     private final NewsDataProcessingService newsDataProcessingService;
     private final WebSocketProgressService progressService;
 
@@ -62,8 +62,11 @@ public class CrawlingOrchestrationService {
             );
             
             // Python 크롤링 워커로 요청 전송
+            crawlingMessageService.sendCrawlingRequest(request);
+            
+            // 임시: 실제로는 결과를 비동기로 받아야 함
             CompletableFuture<List<RawNewsData>> crawlingResult = 
-                crawlingQueueService.submitCrawlingRequest(request);
+                CompletableFuture.completedFuture(List.of());
             
             // 크롤링 완료 후 데이터 처리
             return crawlingResult.thenCompose(rawDataList -> {
@@ -118,7 +121,8 @@ public class CrawlingOrchestrationService {
      * 원시 데이터 비동기 처리
      */
     @Async("crawlingTaskExecutor")
-    private CompletableFuture<List<RawNewsData>> processRawDataAsync(String sessionId, List<RawNewsData> rawDataList) {
+    protected CompletableFuture<List<RawNewsData>> processRawDataAsync(String sessionId,
+		    List<RawNewsData> rawDataList) {
         return CompletableFuture.supplyAsync(() -> {
             int processed = 0;
             int success = 0;

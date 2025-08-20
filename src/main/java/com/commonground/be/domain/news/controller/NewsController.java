@@ -3,6 +3,7 @@ package com.commonground.be.domain.news.controller;
 import com.commonground.be.domain.news.dto.request.CreateNewsRequest;
 import com.commonground.be.domain.news.dto.request.NaverCrawlingRequest;
 import com.commonground.be.domain.news.dto.request.UpdateNewsRequest;
+import com.commonground.be.domain.news.dto.request.UrlCrawlingRequest;
 import com.commonground.be.domain.news.dto.response.CategoryStatistics;
 import com.commonground.be.domain.news.dto.response.CrawlingResponse;
 import com.commonground.be.domain.news.dto.response.NewsResponse;
@@ -19,11 +20,13 @@ import com.commonground.be.global.application.response.HttpResponseDto;
 import com.commonground.be.global.application.response.ResponseCodeEnum;
 import com.commonground.be.global.application.response.ResponseUtils;
 import com.commonground.be.global.application.security.AdminRequired;
+import com.commonground.be.global.infrastructure.messaging.CrawlingMessageService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -48,6 +51,7 @@ public class NewsController {
 
 	private final NewsService newsService;
 	private final CrawlingOrchestrationService crawlingOrchestrationService;
+	private final CrawlingMessageService crawlingMessageService;
 
 	// ==================== 뉴스 CRUD ====================
 
@@ -61,11 +65,9 @@ public class NewsController {
 			return ResponseUtils.of(ResponseCodeEnum.NEWS_CREATE_SUCCESS, NewsResponse.from(news));
 
 		} catch (DuplicateNewsException e) {
-			return ResponseEntity.status(HttpStatus.CONFLICT)
-					.body(new HttpResponseDto(409, e.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.BAD_REQUEST);
 		} catch (InvalidNewsException e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-					.body(new HttpResponseDto(400, e.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.BAD_REQUEST);
 		}
 	}
 
@@ -82,8 +84,7 @@ public class NewsController {
 			return ResponseUtils.of(ResponseCodeEnum.NEWS_GET_SUCCESS,
 					NewsResponse.from(news.get()));
 		} else {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body(new HttpResponseDto(404, "뉴스를 찾을 수 없습니다"));
+			return ResponseUtils.of(ResponseCodeEnum.NOT_FOUND);
 		}
 	}
 
@@ -95,12 +96,10 @@ public class NewsController {
 
 		try {
 			News updatedNews = newsService.updateNews(id, request);
-			return ResponseEntity.ok(
-					new HttpResponseDto(200, "Success", NewsResponse.from(updatedNews)));
+			return ResponseUtils.of(ResponseCodeEnum.SUCCESS, NewsResponse.from(updatedNews));
 
 		} catch (NewsNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body(new HttpResponseDto(400, "NEWS_NOT_FOUND", e.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.NOT_FOUND);
 		}
 	}
 
@@ -110,11 +109,10 @@ public class NewsController {
 
 		try {
 			newsService.deleteNews(id);
-			return ResponseEntity.ok(new HttpResponseDto(200, "Success", null));
+			return ResponseUtils.of(ResponseCodeEnum.SUCCESS);
 
 		} catch (NewsNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body(new HttpResponseDto(400, "NEWS_NOT_FOUND", e.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.NOT_FOUND);
 		}
 	}
 
@@ -131,7 +129,7 @@ public class NewsController {
 				.map(NewsResponse::from)
 				.collect(Collectors.toList());
 
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", response));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, response);
 	}
 
 	@GetMapping("/recent")
@@ -143,7 +141,7 @@ public class NewsController {
 				.map(NewsResponse::from)
 				.collect(Collectors.toList());
 
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", response));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, response);
 	}
 
 	@GetMapping("/trending")
@@ -155,7 +153,7 @@ public class NewsController {
 				.map(NewsResponse::from)
 				.collect(Collectors.toList());
 
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", response));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, response);
 	}
 
 	@GetMapping("/search")
@@ -169,7 +167,7 @@ public class NewsController {
 				.map(NewsResponse::from)
 				.collect(Collectors.toList());
 
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", response));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, response);
 	}
 
 	// ==================== 뉴스 수집 ====================
@@ -194,9 +192,7 @@ public class NewsController {
 
 		} catch (Exception e) {
 			log.error("네이버 API 뉴스 수집 컨트롤러 에러", e);
-			Throwable rootCause = e.getCause() != null ? e.getCause() : e;
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new HttpResponseDto(500, "API_COLLECTION_FAILED", rootCause.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -227,9 +223,31 @@ public class NewsController {
 
 		} catch (Exception e) {
 			log.error("웹 크롤링 컨트롤러 에러", e);
-			Throwable rootCause = e.getCause() != null ? e.getCause() : e;
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new HttpResponseDto(500, "WEB_CRAWLING_FAILED", rootCause.getMessage()));
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@PostMapping("/crawl/url")
+	@AdminRequired(message = "URL 크롤링은 관리자만 가능합니다")
+	public ResponseEntity<HttpResponseDto> crawlUrl(
+			@RequestBody @Valid UrlCrawlingRequest request) {
+		
+		try {
+			// RabbitMQ를 통한 비동기 URL 크롤링 요청
+			crawlingMessageService.sendUrlCrawlingRequest(request);
+			
+			return ResponseUtils.of(ResponseCodeEnum.CRAWLING_EXECUTE_SUCCESS, 
+				Map.of(
+					"sessionId", request.getSessionId(),
+					"url", request.getUrl(),
+					"priority", request.getPriority(),
+					"status", "QUEUED",
+					"message", "URL 크롤링 요청이 큐에 등록되었습니다"
+				));
+				
+		} catch (Exception e) {
+			log.error("URL 크롤링 요청 실패", e);
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -238,12 +256,61 @@ public class NewsController {
 	@GetMapping("/statistics")
 	public ResponseEntity<HttpResponseDto> getNewsStatistics() {
 		NewsStatistics statistics = newsService.getNewsStatistics();
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", statistics));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, statistics);
 	}
 
 	@GetMapping("/statistics/categories")
 	public ResponseEntity<HttpResponseDto> getCategoryStatistics() {
 		CategoryStatistics statistics = newsService.getCategoryStatistics();
-		return ResponseEntity.ok(new HttpResponseDto(200, "Success", statistics));
+		return ResponseUtils.of(ResponseCodeEnum.SUCCESS, statistics);
+	}
+	
+	// ==================== 추가 API 구현 ====================
+	
+	/**
+	 * 실시간 뉴스 조회
+	 */
+	@GetMapping("/realtime")
+	public ResponseEntity<HttpResponseDto> getRealtimeNews(
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "20") int limit,
+			@RequestParam(required = false) String category,
+			@RequestParam(defaultValue = "latest") String sort) {
+		
+		try {
+			List<News> realtimeNews = newsService.findRecentNews(limit);
+			List<NewsResponse> response = realtimeNews.stream()
+				.map(NewsResponse::from)
+				.collect(Collectors.toList());
+			
+			return ResponseUtils.of(ResponseCodeEnum.SUCCESS, response);
+			
+		} catch (Exception e) {
+			log.error("실시간 뉴스 조회 실패", e);
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR);
+		}
+	}
+	
+	/**
+	 * 뉴스 상세 조회 (조회수 증가 포함)
+	 */
+	@GetMapping("/detail/{id}")
+	public ResponseEntity<HttpResponseDto> getNewsDetail(@PathVariable String id) {
+		try {
+			Optional<News> news = newsService.findNewsById(id);
+			
+			if (news.isPresent()) {
+				// 조회수 증가 (비동기)
+				newsService.incrementViewCount(id);
+				
+				return ResponseUtils.of(ResponseCodeEnum.SUCCESS, NewsResponse.from(news.get()));
+			} else {
+				return ResponseUtils.of(ResponseCodeEnum.NOT_FOUND);
+			}
+			
+		} catch (Exception e) {
+			log.error("뉴스 상세 조회 실패: id={}", id, e);
+			return ResponseUtils.of(ResponseCodeEnum.INTERNAL_SERVER_ERROR);
+		}
 	}
 }

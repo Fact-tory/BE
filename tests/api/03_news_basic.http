@@ -1,0 +1,68 @@
+### 📰 3. 뉴스 기본 CRUD API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@adminToken = qpwVW2CTgN2bSasT5tOpRhmvGX6g3CdcorsM1iM4bSo=
+
+### 3.1 뉴스 생성 (관리자 권한)
+POST {{baseUrl}}/news
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "테스트 뉴스 제목",
+  "content": "테스트 뉴스 내용입니다. 이것은 API 테스트를 위한 샘플 뉴스입니다.",
+  "url": "https://test.news.com/article/12345",
+  "summary": "테스트 뉴스 요약",
+  "authorName": "테스트 기자",
+  "category": "GENERAL",
+  "mediaOutletId": "test_media_001",
+  "keywords": ["테스트", "뉴스", "API"]
+}
+
+### 3.2 뉴스 생성 (권한 없이 - 실패 예상)
+POST {{baseUrl}}/news
+Content-Type: application/json
+
+{
+  "title": "권한 없는 뉴스 생성 시도",
+  "content": "이것은 실패해야 합니다.",
+  "url": "https://test.news.com/article/unauthorized",
+  "category": "GENERAL"
+}
+
+### 3.3 뉴스 상세 조회 (존재하는 ID)
+GET {{baseUrl}}/news/507f1f77bcf86cd799439011
+
+### 3.4 뉴스 상세 조회 (존재하지 않는 ID - 404 예상)
+GET {{baseUrl}}/news/nonexistent_id_12345
+
+### 3.5 뉴스 상세 조회 (조회수 증가 확인용)
+GET {{baseUrl}}/news/detail/507f1f77bcf86cd799439011
+
+### 3.6 뉴스 수정 (관리자 권한)
+PUT {{baseUrl}}/news/507f1f77bcf86cd799439011
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "수정된 테스트 뉴스 제목",
+  "content": "수정된 테스트 뉴스 내용입니다.",
+  "summary": "수정된 요약",
+  "keywords": ["수정", "테스트", "뉴스"]
+}
+
+### 3.7 뉴스 수정 (권한 없이 - 실패 예상)
+PUT {{baseUrl}}/news/507f1f77bcf86cd799439011
+Content-Type: application/json
+
+{
+  "title": "권한 없는 수정 시도"
+}
+
+### 3.8 뉴스 삭제 (관리자 권한)
+DELETE {{baseUrl}}/news/507f1f77bcf86cd799439011
+Authorization: Bearer {{adminToken}}
+
+### 3.9 뉴스 삭제 (권한 없이 - 실패 예상)
+DELETE {{baseUrl}}/news/507f1f77bcf86cd799439011

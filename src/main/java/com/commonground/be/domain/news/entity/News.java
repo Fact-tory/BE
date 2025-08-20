@@ -65,6 +65,9 @@ public class News {
 	// 메타 정보
 	@Builder.Default
 	private Long viewCount = 0L;
+	
+	// 트렌딩 알고리즘용 임시 필드 (캐시된 점수)
+	private Double trendingScore;
 
 	@Indexed
 	private CrawlingSourceEnum crawlingSource;
@@ -162,5 +165,9 @@ public class News {
 	
 	public void assignId(String id) {
 		this.id = id;
+	}
+	
+	public void setTrendingScore(Double trendingScore) {
+		this.trendingScore = trendingScore;
 	}
 }

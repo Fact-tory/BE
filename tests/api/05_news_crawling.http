@@ -1,0 +1,114 @@
+### 🕷️ 5. 뉴스 크롤링 API 테스트
+
+# 환경 변수 설정
+@baseUrl = http://localhost:8080/api/v1
+@adminToken = qpwVW2CTgN2bSasT5tOpRhmvGX6g3CdcorsM1iM4bSo=
+
+### 5.1 네이버 API 뉴스 수집 (Light - 5개 기사)
+POST {{baseUrl}}/news/collect/naver-api
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 5,
+  "sessionId": "test_session_light_001"
+}
+
+### 5.2 네이버 API 뉴스 수집 (Medium - 30개 기사)
+POST {{baseUrl}}/news/collect/naver-api
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "025",
+  "categoryId": "101",
+  "maxArticles": 30,
+  "sessionId": "test_session_medium_001"
+}
+
+### 5.3 네이버 API 뉴스 수집 (Heavy - 100개 기사)
+POST {{baseUrl}}/news/collect/naver-api
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "032",
+  "categoryId": "102",
+  "maxArticles": 100,
+  "sessionId": "test_session_heavy_001"
+}
+
+### 5.4 네이버 웹 크롤링 (Light - 10개 기사)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 10,
+  "maxScrollAttempts": 10,
+  "sessionId": "test_crawl_light_001"
+}
+
+### 5.5 네이버 웹 크롤링 (Medium - 40개 기사)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "020",
+  "categoryId": "101",
+  "maxArticles": 40,
+  "maxScrollAttempts": 20,
+  "sessionId": "test_crawl_medium_001"
+}
+
+### 5.6 네이버 웹 크롤링 (Heavy - 80개 기사)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "052",
+  "categoryId": "103",
+  "maxArticles": 80,
+  "maxScrollAttempts": 25,
+  "sessionId": "test_crawl_heavy_001"
+}
+
+### 5.7 크롤링 요청 (권한 없이 - 실패 예상)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 5
+}
+
+### 5.8 잘못된 파라미터 (최소값 미만)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 0,
+  "maxScrollAttempts": 3
+}
+
+### 5.9 잘못된 파라미터 (최대값 초과)
+POST {{baseUrl}}/news/crawl/naver
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "officeId": "001",
+  "categoryId": "100",
+  "maxArticles": 150,
+  "maxScrollAttempts": 60
+}

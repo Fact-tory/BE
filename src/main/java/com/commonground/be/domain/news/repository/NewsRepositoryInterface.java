@@ -4,10 +4,12 @@ import com.commonground.be.domain.news.entity.News;
 import com.commonground.be.domain.news.enums.CategoryEnum;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.stereotype.Repository;
 
-@Repository
-public interface NewsRepository {
+/**
+ * News 도메인 Repository 인터페이스
+ * 도메인 비즈니스 로직에 특화된 메서드만 정의
+ */
+public interface NewsRepositoryInterface {
 
 	News save(News news);
 
@@ -24,23 +26,22 @@ public interface NewsRepository {
 	List<News> findTrendingNews(int limit);
 
 	boolean existsByUrl(String url);
+	
+	boolean existsByOriginalUrl(String originalUrl);
+	
+	boolean existsByTitleAndAuthorNameAndCategory(String title, String authorName, CategoryEnum category);
 
 	long countByCategory(CategoryEnum category);
 
 	long countByMediaOutletId(String mediaOutletId);
 
+	void delete(News news);
+
 	void deleteById(String id);
 
 	List<News> searchByKeyword(String keyword, int page, int limit);
-	
-	// 중복 뉴스 체크를 위한 메서드들
-	boolean existsByOriginalUrl(String originalUrl);
-	
-	boolean existsByTitleAndAuthorNameAndCategory(String title, String authorName, CategoryEnum category);
-	
-	void delete(News news);
-	
+
 	void incrementViewCount(String id);
-	
+
 	long getTotalCount();
 }

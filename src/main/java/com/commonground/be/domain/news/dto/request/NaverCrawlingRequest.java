@@ -22,11 +22,13 @@ public class NaverCrawlingRequest {
 
 	@Min(value = 1, message = "최소 1개 이상 크롤링해야 합니다")
 	@Max(value = 100, message = "최대 100개까지 크롤링 가능합니다")
-	private final Integer maxArticles = 50;
+	@Builder.Default
+	private Integer maxArticles = 50;
 
 	@Min(value = 5, message = "최소 5회 이상 스크롤해야 합니다")
 	@Max(value = 50, message = "최대 50회까지 스크롤 가능합니다")
-	private final Integer maxScrollAttempts = 20;
+	@Builder.Default
+	private Integer maxScrollAttempts = 20;
 
 	private String sessionId;
 }
