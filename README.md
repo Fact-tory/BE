@@ -227,17 +227,12 @@ def analyze_news(article):
 
 | 📖 Guide | 🎯 Purpose | 🔗 Link |
 |----------|------------|---------|
-| **📡 API 최신 개요** | 현재 구현된 API 아키텍처 | [Updated API Overview](docs/UPDATED_API_OVERVIEW.md) |
-| **🔄 배치 크롤링** | 정기 크롤링 시스템 가이드 | [Batch System](docs/UPDATED_API_OVERVIEW.md#정기-크롤링-배치-시스템-new) |
-| **🐍 Python Crawler** | Python 크롤러 완전 가이드 | [Python Crawler](python_crawler_advanced/README.md) |
-| **🔥 하이브리드 시스템** | Java-Python 통합 아키텍처 | [Hybrid System Guide](docs/HYBRID_SYSTEM_GUIDE.md) |
-| **🚀 Quick Start** | Docker 환경 설정 | [Docker Setup](docs/DOCKER_SETUP.md) |
-| **🔧 Development** | 로컬 개발 가이드 | [Development Scripts](scripts/README.md) |
-| **📡 API Reference** | REST API 완전 문서 | [REST API Docs](docs/rest-api.md) |
-| **🏗️ Architecture** | 시스템 설계 개요 | [API Architecture](docs/API_OVERVIEW.md) |
-| **🗄️ Database** | 스키마 및 관계 | [Database Schema](docs/schema.md) |
-| **🧪 Testing** | 테스트 전략 | [Testing Guide](docs/testing/) |
-| **🚀 Deployment** | CI/CD 및 배포 | [GitHub Actions](docs/GITHUB_ACTIONS_SETUP.md) |
+| **🏗️ API 아키텍처** | 구현된 API 엔드포인트 및 구조 | [API Overview](docs/API_OVERVIEW.md) |
+| **🔐 OAuth2 설정** | 소셜 로그인 연동 가이드 | [OAuth2 Setup](docs/OAuth2_SETUP_GUIDE.md) |
+| **🧪 API 테스트** | HTTP 테스트 파일 사용법 | [API Tests](tests/api/README.md) |
+| **🚀 개발 환경** | Docker 및 로컬 개발 설정 | [Docker Setup](docs/DOCKER_SETUP.md) |
+| **🗄️ 데이터베이스** | 스키마 및 관계 | [Database Schema](docs/schema.md) |
+| **🧪 테스트 가이드** | Spring Boot 테스트 전략 | [Testing Guide](docs/testing/) |
 
 </div>
 
