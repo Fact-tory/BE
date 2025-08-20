@@ -14,44 +14,58 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UserAdapter {
+public class UserAdapter implements UserRepositoryInterface {
 
 	private final UserRepository userRepository;
 
+	@Override
 	public User findByUsername(String username) {
 		return userRepository.findByUsernameAndDeletedAtIsNull(username)
 				.orElseThrow(UserExceptions::userNotFound);
 	}
+	
+	@Override
+	public User findByEmail(String email) {
+		return userRepository.findByEmailAndDeletedAtIsNull(email)
+				.orElseThrow(UserExceptions::userNotFound);
+	}
 
+	@Override
 	public List<User> findAll() {
 		return userRepository.findAll();
 	}
 
+	@Override
 	public boolean existsByUsername(String username) {
 		return userRepository.existsByUsernameAndDeletedAtIsNull(username);
 	}
 
+	@Override
 	public User findById(Long id) {
 		return userRepository.findByIdAndDeletedAtIsNull(id)
 				.orElseThrow(UserExceptions::userNotFound);
 	}
 
-	public void save(User user) {
-		userRepository.save(user);
+	@Override
+	public User save(User user) {
+		return userRepository.save(user);
 	}
 
-	public void isDeleted(String username) {
+	@Override
+	public void validateNotDeleted(String username) {
 		User user = findByUsername(username);
 		if (user.getDeletedAt() != null) {
 			throw UserExceptions.userDeleted();
 		}
 	}
 
+	@Override
 	public void delete(User user) {
 		userRepository.delete(user);
 	}
 
-	public User findUserByUsernameAndNameAndEmail(UserIdentity userIdentity) {
+	@Override
+	public User findByUserIdentity(UserIdentity userIdentity) {
 		return userRepository.findUserByUsernameAndNameAndEmailAndDeletedAtIsNull(
 						userIdentity.getUsername(), userIdentity.getName(), userIdentity.getEmail())
 				.orElseThrow(
@@ -59,7 +73,7 @@ public class UserAdapter {
 				);
 	}
 
-	// 10자리 랜덤한 패스워드를 생성하는 메서드
+	@Override
 	public String generateTemporaryPassword() {
 		int length = 10;
 		String upperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -84,6 +98,17 @@ public class UserAdapter {
 
 		// 패스워드를 섞어서 반환
 		return shuffleString(password.toString());
+	}
+
+	/**
+	 * 테스트용 추가 메서드들
+	 */
+	public User findUserByUsernameAndNameAndEmail(UserIdentity userIdentity) {
+		return findByUserIdentity(userIdentity);
+	}
+	
+	public void isDeleted(String username) {
+		validateNotDeleted(username);
 	}
 
 	// 문자열을 랜덤하게 섞는 메서드

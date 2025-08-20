@@ -82,14 +82,14 @@ class UserAdapterTest {
         void findByUsername_WithValidUsername_ShouldReturnUser() {
             // Given: 유효한 username과 Mock 설정
             String username = "testuser";
-            when(userRepository.findByUsername(username)).thenReturn(Optional.of(testUser));
+            when(userRepository.findByUsernameAndDeletedAtIsNull(username)).thenReturn(Optional.of(testUser));
 
             // When: username으로 사용자를 조회하면
             User result = userAdapter.findByUsername(username);
 
             // Then: 올바른 사용자가 반환되어야 함
             assertThat(result).isEqualTo(testUser);
-            verify(userRepository).findByUsername(username);
+            verify(userRepository).findByUsernameAndDeletedAtIsNull(username);
         }
 
         @Test
@@ -97,12 +97,12 @@ class UserAdapterTest {
         void findByUsername_WithNonExistentUsername_ShouldThrowException() {
             // Given: 존재하지 않는 username
             String username = "nonexistent";
-            when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+            when(userRepository.findByUsernameAndDeletedAtIsNull(username)).thenReturn(Optional.empty());
 
             // When & Then: UserExceptions.userNotFound() 예외가 발생해야 함
             assertThatThrownBy(() -> userAdapter.findByUsername(username))
                     .isInstanceOf(RuntimeException.class);
-            verify(userRepository).findByUsername(username);
+            verify(userRepository).findByUsernameAndDeletedAtIsNull(username);
         }
 
         @Test
@@ -110,14 +110,14 @@ class UserAdapterTest {
         void findById_WithValidId_ShouldReturnUser() {
             // Given: 유효한 ID와 Mock 설정
             Long userId = 1L;
-            when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
+            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.of(testUser));
 
             // When: ID로 사용자를 조회하면
             User result = userAdapter.findById(userId);
 
             // Then: 올바른 사용자가 반환되어야 함
             assertThat(result).isEqualTo(testUser);
-            verify(userRepository).findById(userId);
+            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
         }
 
         @Test
@@ -125,12 +125,12 @@ class UserAdapterTest {
         void findById_WithNonExistentId_ShouldThrowException() {
             // Given: 존재하지 않는 ID
             Long userId = 999L;
-            when(userRepository.findById(userId)).thenReturn(Optional.empty());
+            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.empty());
 
             // When & Then: UserExceptions.userNotFound() 예외가 발생해야 함
             assertThatThrownBy(() -> userAdapter.findById(userId))
                     .isInstanceOf(RuntimeException.class);
-            verify(userRepository).findById(userId);
+            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
         }
 
         @Test
@@ -168,14 +168,14 @@ class UserAdapterTest {
         void existsByUsername_WithExistingUsername_ShouldReturnTrue() {
             // Given: 존재하는 username
             String username = "testuser";
-            when(userRepository.existsByUsername(username)).thenReturn(true);
+            when(userRepository.existsByUsernameAndDeletedAtIsNull(username)).thenReturn(true);
 
             // When: 사용자 존재 여부를 확인하면
             boolean exists = userAdapter.existsByUsername(username);
 
             // Then: true를 반환해야 함
             assertThat(exists).isTrue();
-            verify(userRepository).existsByUsername(username);
+            verify(userRepository).existsByUsernameAndDeletedAtIsNull(username);
         }
 
         @Test
@@ -183,14 +183,14 @@ class UserAdapterTest {
         void existsByUsername_WithNonExistentUsername_ShouldReturnFalse() {
             // Given: 존재하지 않는 username
             String username = "nonexistent";
-            when(userRepository.existsByUsername(username)).thenReturn(false);
+            when(userRepository.existsByUsernameAndDeletedAtIsNull(username)).thenReturn(false);
 
             // When: 사용자 존재 여부를 확인하면
             boolean exists = userAdapter.existsByUsername(username);
 
             // Then: false를 반환해야 함
             assertThat(exists).isFalse();
-            verify(userRepository).existsByUsername(username);
+            verify(userRepository).existsByUsernameAndDeletedAtIsNull(username);
         }
     }
 

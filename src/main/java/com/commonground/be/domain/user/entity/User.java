@@ -93,4 +93,18 @@ public class User extends SoftDeleteTimeStamp {
 	public boolean isEmailChanged(String newEmail) {
 		return !this.email.equals(newEmail);
 	}
+	
+	/**
+	 * 관리자 권한 승격
+	 */
+	public void promoteToManager() {
+		this.userRole = UserRole.MANAGER;
+	}
+	
+	/**
+	 * 일반 사용자 권한으로 강등
+	 */
+	public void demoteToUser() {
+		this.userRole = UserRole.USER;
+	}
 }

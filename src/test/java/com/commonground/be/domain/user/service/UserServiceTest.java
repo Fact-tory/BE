@@ -50,8 +50,6 @@ class UserServiceTest {
     @Mock
     private UserAdapter userAdapter;
 
-    @Mock
-    private UserRepository userRepository;
 
     @Mock
     private RedisTemplate<String, String> redisTemplate;
@@ -75,6 +73,7 @@ class UserServiceTest {
                 .email("test@example.com")
                 .role(UserRole.USER)
                 .build();
+        testUser.initializeTimestamps();
 
         // 관리자 사용자 생성
         managerUser = User.builder()
@@ -83,6 +82,7 @@ class UserServiceTest {
                 .email("manager@example.com")
                 .role(UserRole.MANAGER)
                 .build();
+        managerUser.initializeTimestamps();
     }
 
     @Nested
@@ -95,7 +95,7 @@ class UserServiceTest {
             // Given: 유효한 사용자 ID가 주어졌을 때
             Long userId = 1L;
             when(userAdapter.findById(userId)).thenReturn(testUser);
-            doNothing().when(userAdapter).isDeleted(testUser.getUsername());
+            doNothing().when(userAdapter).validateNotDeleted(testUser.getUsername());
 
             // When: 사용자를 조회하면
             UserResponseDto result = userService.getUser(userId);
@@ -107,7 +107,7 @@ class UserServiceTest {
             
             // 의존성 호출 검증
             verify(userAdapter).findById(userId);
-            verify(userAdapter).isDeleted(testUser.getUsername());
+            verify(userAdapter).validateNotDeleted(testUser.getUsername());
         }
     }
 
@@ -119,7 +119,7 @@ class UserServiceTest {
         @DisplayName("정상적인 회원 탈퇴 처리")
         void withdraw_WithValidUser_ShouldMarkAsDeletedAndInvalidateTokens() {
             // Given: 유효한 사용자가 주어졌을 때
-            doNothing().when(userAdapter).isDeleted(testUser.getUsername());
+            doNothing().when(userAdapter).validateNotDeleted(testUser.getUsername());
             doNothing().when(userAdapter).save(any(User.class));
             doNothing().when(tokenManager).invalidateAllUserTokens(testUser.getUsername());
 
@@ -127,7 +127,7 @@ class UserServiceTest {
             userService.withdraw(testUser);
 
             // Then: 사용자가 삭제 상태로 변경되고 토큰이 무효화되어야 함
-            verify(userAdapter).isDeleted(testUser.getUsername());
+            verify(userAdapter).validateNotDeleted(testUser.getUsername());
             verify(userAdapter).save(testUser);
             verify(tokenManager).invalidateAllUserTokens(testUser.getUsername());
         }
@@ -142,8 +142,15 @@ class UserServiceTest {
         void resign_WithValidUserId_ShouldRestoreUser() {
             // Given: 삭제된 사용자 ID가 주어졌을 때
             Long userId = 1L;
-            when(userAdapter.findById(userId)).thenReturn(testUser);
-            doNothing().when(userAdapter).isDeleted(testUser.getUsername());
+            User deletedUser = User.builder()
+                    .username("deleteduser")
+                    .name("삭제된 사용자")
+                    .email("deleted@example.com")
+                    .role(UserRole.USER)
+                    .build();
+            deletedUser.softDelete(); // 삭제 상태로 설정
+            
+            when(userAdapter.findById(userId)).thenReturn(deletedUser);
             doNothing().when(userAdapter).save(any(User.class));
 
             // When: 사용자를 복원하면
@@ -151,8 +158,7 @@ class UserServiceTest {
 
             // Then: 사용자가 복원되어야 함
             verify(userAdapter).findById(userId);
-            verify(userAdapter).isDeleted(testUser.getUsername());
-            verify(userAdapter).save(testUser);
+            verify(userAdapter).save(deletedUser);
         }
     }
 
@@ -208,7 +214,7 @@ class UserServiceTest {
         void getAllUsersForAdmin_ShouldReturnAllUsers() {
             // Given: 여러 사용자가 존재할 때 (삭제된 사용자 포함)
             List<User> allUsers = Arrays.asList(testUser, managerUser);
-            when(userRepository.findAll()).thenReturn(allUsers);
+            when(userAdapter.findAll()).thenReturn(allUsers);
 
             // When: 관리자용 전체 사용자 목록을 조회하면
             List<UserResponseDto> result = userService.getAllUsersForAdmin();
@@ -218,7 +224,7 @@ class UserServiceTest {
             assertThat(result.get(0).getUsername()).isEqualTo(testUser.getUsername());
             assertThat(result.get(1).getUsername()).isEqualTo(managerUser.getUsername());
             
-            verify(userRepository).findAll();
+            verify(userAdapter).findAll();
         }
 
         @Test
@@ -243,18 +249,20 @@ class UserServiceTest {
         @DisplayName("활성 사용자 수 조회")
         void getActiveUserCount_ShouldReturnActiveUserCount() {
             // Given: 활성/비활성 사용자가 혼재할 때
-            User activeUser1 = User.builder().username("active1").build();
-            User activeUser2 = User.builder().username("active2").build();
+            User activeUser1 = User.builder().username("active1").name("활성사용자1").email("active1@test.com").role(UserRole.USER).build();
+            User activeUser2 = User.builder().username("active2").name("활성사용자2").email("active2@test.com").role(UserRole.USER).build();
+            activeUser1.initializeTimestamps();
+            activeUser2.initializeTimestamps();
             
             List<User> allUsers = Arrays.asList(activeUser1, activeUser2);
-            when(userRepository.findAll()).thenReturn(allUsers);
+            when(userAdapter.findAll()).thenReturn(allUsers);
 
             // When: 활성 사용자 수를 조회하면
             long activeCount = userService.getActiveUserCount();
 
             // Then: 활성 사용자 수가 반환되어야 함
             assertThat(activeCount).isEqualTo(2L);
-            verify(userRepository).findAll();
+            verify(userAdapter).findAll();
         }
     }
 
@@ -317,7 +325,7 @@ class UserServiceTest {
         void logout_WithValidUsername_ShouldDeleteFromRedis() {
             // Given: 유효한 username이 주어졌을 때
             String username = "testuser";
-            doNothing().when(redisTemplate).delete(username);
+            when(redisTemplate.delete(username)).thenReturn(true);
 
             // When: 로그아웃을 수행하면
             userService.logout(username);
@@ -336,14 +344,14 @@ class UserServiceTest {
         void getRecentUsers_WithValidDays_ShouldReturnRecentUsers() {
             // Given: 신규 가입자가 존재할 때
             List<User> allUsers = Arrays.asList(testUser, managerUser);
-            when(userRepository.findAll()).thenReturn(allUsers);
+            when(userAdapter.findAll()).thenReturn(allUsers);
 
             // When: 7일 이내 신규 가입자를 조회하면
             List<UserResponseDto> recentUsers = userService.getRecentUsers(7);
 
             // Then: 결과가 반환되어야 함
             assertThat(recentUsers).isNotNull();
-            verify(userRepository).findAll();
+            verify(userAdapter).findAll();
         }
 
         @Test
@@ -351,14 +359,14 @@ class UserServiceTest {
         void getRecentlyActiveUsers_WithValidDays_ShouldReturnActiveUsers() {
             // Given: 활동 사용자가 존재할 때
             List<User> allUsers = Arrays.asList(testUser, managerUser);
-            when(userRepository.findAll()).thenReturn(allUsers);
+            when(userAdapter.findAll()).thenReturn(allUsers);
 
             // When: 최근 활동 사용자를 조회하면
             List<UserResponseDto> activeUsers = userService.getRecentlyActiveUsers(7);
 
             // Then: 결과가 반환되어야 함
             assertThat(activeUsers).isNotNull();
-            verify(userRepository).findAll();
+            verify(userAdapter).findAll();
         }
 
         @Test
@@ -366,14 +374,14 @@ class UserServiceTest {
         void processDormantAccounts_ShouldReturnDormantAccountCount() {
             // Given: 휴면 계정이 존재할 때
             List<User> allUsers = Arrays.asList(testUser, managerUser);
-            when(userRepository.findAll()).thenReturn(allUsers);
+            when(userAdapter.findAll()).thenReturn(allUsers);
 
             // When: 휴면 계정을 처리하면
             int dormantCount = userService.processDormantAccounts();
 
             // Then: 휴면 계정 수가 반환되어야 함
             assertThat(dormantCount).isGreaterThanOrEqualTo(0);
-            verify(userRepository).findAll();
+            verify(userAdapter).findAll();
         }
     }
 }

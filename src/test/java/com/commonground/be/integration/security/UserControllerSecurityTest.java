@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.commonground.be.config.TestSecurityConfig;
-import com.commonground.be.domain.user.controller.UserController;
+import com.commonground.be.domain.user.controller.SimplifiedUserController;
 import com.commonground.be.domain.user.entity.User;
 import com.commonground.be.domain.user.service.UserService;
 import com.commonground.be.domain.user.utils.UserRole;
@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 이 테스트는 UserController의 보안 관련 기능을 검증합니다.
  * JWT 인증, 권한 검사, 접근 제어 등을 테스트합니다.
  */
-@WebMvcTest(UserController.class)
+@WebMvcTest(SimplifiedUserController.class)
 @Import(TestSecurityConfig.class)
 @ActiveProfiles("test")
 @DisplayName("UserController Security 통합 테스트")
